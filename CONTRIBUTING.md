@@ -67,7 +67,7 @@ MoltShield patches OpenClaw to emit `agent:pre_inference` events before any infe
 
 ### Heuristics
 
-Fast checks that run before LLM evaluation:
+Fast checks that run before LLM evaluation (to be tested, may be scrapped):
 - Invisible characters (zero-width spaces)
 - Excessive mixed case (Best-of-N signature)
 - Jailbreak patterns ("ignore previous", "you are now DAN")
@@ -77,23 +77,9 @@ Fast checks that run before LLM evaluation:
 
 ## How to Contribute
 
-### Adding Heuristic Patterns
+### TODO.md has the master todo list
 
-Edit `src/evaluator.ts`:
 
-```typescript
-// Add to JAILBREAK_PATTERNS
-{ pattern: /your_pattern_here/i, weight: 5 },
-
-// Or add to INJECTION_MARKERS
-/your_injection_marker/i,
-```
-
-Test your pattern:
-```bash
-npm test
-npm run benchmark:fp  # Check false positive rate
-```
 
 ### Improving Detection
 
@@ -128,6 +114,24 @@ interface PreInferenceEvent {
     annotate: (key: string, value: unknown) => void;
   };
 }
+```
+
+### Adding Heuristic Patterns
+
+Edit `src/evaluator.ts`:
+
+```typescript
+// Add to JAILBREAK_PATTERNS
+{ pattern: /your_pattern_here/i, weight: 5 },
+
+// Or add to INJECTION_MARKERS
+/your_injection_marker/i,
+```
+
+Test your pattern:
+```bash
+npm test
+npm run benchmark:fp  # Check false positive rate
 ```
 
 ## Testing Requirements

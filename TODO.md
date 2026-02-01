@@ -33,3 +33,6 @@
 - Push to clawdhub https://www.clawhub.com/
 - LRU cache unit test
 - consider multimodal protection
+- add response filtering step as per pg 13 of DATDP, as well as paraphrasing 
+- test greyswan https://huggingface.co/collections/GraySwanAI/model-with-circuit-breakers
+- make sure NSWF doesn't get flagged, this isn't a nanny
