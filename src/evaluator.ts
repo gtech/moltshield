@@ -689,33 +689,31 @@ async function runDATDP(
     }
   };
 
-  const verdicts: number[] = [];
-  let reasoning = "";
-
-  // Run N iterations
-  for (let i = 0; i < config.iterations; i++) {
+  // Run N iterations in parallel for lower latency
+  const iterationPromises = Array.from({ length: config.iterations }, async (_, i) => {
     try {
       const response = await callEvaluator();
       const verdict = getIndividualVerdict(response);
-      verdicts.push(verdict);
-
-      // Keep first response as reasoning
-      if (i === 0) {
-        reasoning = response.slice(0, 500);
-      }
 
       if (config.verbose) {
         const voteStr = verdict === 1 ? "yes" : verdict === 0 ? "no" : "unclear";
         console.log(`[MoltShield] DATDP iteration ${i + 1}/${config.iterations}: ${voteStr}`);
       }
+
+      return { verdict, response };
     } catch (error) {
       if (config.verbose) {
         console.error(`[MoltShield] DATDP iteration ${i + 1} failed:`, error);
       }
       // On error, count as unclear (0.5)
-      verdicts.push(0.5);
+      return { verdict: 0.5, response: "" };
     }
-  }
+  });
+
+  const results = await Promise.all(iterationPromises);
+  const verdicts = results.map(r => r.verdict);
+  // Use first successful response as reasoning
+  const reasoning = results.find(r => r.response)?.response.slice(0, 500) ?? "";
 
   const yesVotes = verdicts.filter(v => v === 1).length;
   const noVotes = verdicts.filter(v => v === 0).length;
