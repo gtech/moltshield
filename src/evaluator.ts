@@ -66,6 +66,8 @@ export interface EvaluatorConfig {
   timeout?: number;
   /** Disable cache (default: false) */
   noCache?: boolean;
+  /** DATDP block threshold - block if score >= threshold (default: 0, paper default) */
+  blockThreshold?: number;
 }
 
 interface ResolvedConfig {
@@ -80,6 +82,7 @@ interface ResolvedConfig {
   verbose: boolean;
   timeout: number;
   noCache: boolean;
+  blockThreshold: number;
 }
 
 // ============================================================================
@@ -248,6 +251,7 @@ async function resolveConfig(userConfig: EvaluatorConfig): Promise<ResolvedConfi
   const verbose = userConfig.verbose ?? false;
   const timeout = userConfig.timeout ?? 10000;
   const noCache = userConfig.noCache ?? false;
+  const blockThreshold = userConfig.blockThreshold ?? parseInt(process.env.MOLTSHIELD_BLOCK_THRESHOLD ?? "0");
 
   // Get assessment task parameters
   const task = userConfig.task ?? "safety1";
@@ -271,6 +275,7 @@ async function resolveConfig(userConfig: EvaluatorConfig): Promise<ResolvedConfi
       verbose,
       timeout,
       noCache,
+      blockThreshold,
     };
   }
 
@@ -294,6 +299,7 @@ async function resolveConfig(userConfig: EvaluatorConfig): Promise<ResolvedConfi
       verbose,
       timeout,
       noCache,
+      blockThreshold,
     };
   }
 
@@ -312,6 +318,7 @@ async function resolveConfig(userConfig: EvaluatorConfig): Promise<ResolvedConfi
       verbose,
       timeout,
       noCache,
+      blockThreshold,
     };
   }
 
@@ -330,6 +337,7 @@ async function resolveConfig(userConfig: EvaluatorConfig): Promise<ResolvedConfi
       verbose,
       timeout,
       noCache,
+      blockThreshold,
     };
   }
 
@@ -354,6 +362,7 @@ async function resolveConfig(userConfig: EvaluatorConfig): Promise<ResolvedConfi
         verbose,
         timeout,
         noCache,
+        blockThreshold,
       };
     }
   } catch {
@@ -373,6 +382,7 @@ async function resolveConfig(userConfig: EvaluatorConfig): Promise<ResolvedConfi
     verbose,
     timeout,
     noCache,
+    blockThreshold,
   };
 }
 
@@ -649,15 +659,15 @@ function getIndividualVerdict(answerString: string): number {
 /**
  * Calculate final answer using paper's weighted voting:
  * - Rejections (yes) weighted 2x acceptances (no)
- * - Block if weighted_average >= 0
+ * - Block if score >= threshold (default 0, paper default)
  */
-function getFinalAnswer(verdictArray: number[]): { blocked: boolean; score: number } {
+function getFinalAnswer(verdictArray: number[], threshold: number = 0): { blocked: boolean; score: number } {
   const yesCount = verdictArray.filter(v => v === 1).length;
   const noCount = verdictArray.filter(v => v === 0).length;
 
-  // Paper formula: yes*2 - no >= 0 means block
+  // Paper formula: yes*2 - no
   const score = (yesCount * 2) - noCount;
-  const blocked = score >= 0;
+  const blocked = score >= threshold;
 
   return { blocked, score };
 }
@@ -724,7 +734,7 @@ async function runDATDP(
   const noVotes = verdicts.filter(v => v === 0).length;
   const unclearVotes = verdicts.filter(v => v === 0.5).length;
 
-  const { blocked, score } = getFinalAnswer(verdicts);
+  const { blocked, score } = getFinalAnswer(verdicts, config.blockThreshold);
 
   return { blocked, yesVotes, noVotes, unclearVotes, score, reasoning };
 }

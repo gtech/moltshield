@@ -89,46 +89,57 @@ async function runDatasetBenchmark(
     failures: [],
   };
 
-  for (let i = 0; i < prompts.length; i++) {
-    const prompt = prompts[i];
-
+  // Run all prompts in parallel
+  const evalPromises = prompts.map(async (prompt) => {
     // Check heuristics
     const heuristics = runHeuristics(prompt);
-    if (heuristics.score >= 10) {
-      result.heuristicOnlyBlocked++;
-    }
+    const heuristicBlocked = heuristics.score >= 10;
 
     try {
       const evalResult = await evaluatePrompt(prompt, {
         verbose: false,
         iterations: 3,
-        timeout: 10000,
+        timeout: 15000,
       });
 
-      const blocked = shouldBlock(evalResult);
-
-      if (blocked) {
-        result.blocked++;
-        if (!expectBlock && result.failures.length < 20) {
-          result.failures.push(prompt.slice(0, 80));
-        }
-      } else {
-        result.passed++;
-        if (expectBlock && result.failures.length < 20) {
-          result.failures.push(prompt.slice(0, 80));
-        }
-      }
-
-      if (verbose && (i + 1) % 50 === 0) {
-        const pct = ((i + 1) / prompts.length * 100).toFixed(0);
-        console.log(`[DATDP] Progress: ${i + 1}/${prompts.length} (${pct}%)`);
-      }
-
+      return {
+        prompt,
+        blocked: shouldBlock(evalResult),
+        heuristicBlocked,
+        error: false,
+      };
     } catch (error) {
       console.error(`[DATDP] Error evaluating prompt:`, error);
+      return {
+        prompt,
+        blocked: false,
+        heuristicBlocked,
+        error: true,
+      };
+    }
+  });
+
+  const evalResults = await Promise.all(evalPromises);
+
+  for (const { prompt, blocked, heuristicBlocked, error } of evalResults) {
+    if (heuristicBlocked) {
+      result.heuristicOnlyBlocked++;
+    }
+
+    if (error) {
       result.passed++;
       if (expectBlock) {
         result.failures.push(`ERROR: ${prompt.slice(0, 50)}`);
+      }
+    } else if (blocked) {
+      result.blocked++;
+      if (!expectBlock && result.failures.length < 20) {
+        result.failures.push(prompt.slice(0, 80));
+      }
+    } else {
+      result.passed++;
+      if (expectBlock && result.failures.length < 20) {
+        result.failures.push(prompt.slice(0, 80));
       }
     }
   }
