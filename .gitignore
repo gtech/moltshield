@@ -1,0 +1,9 @@
+node_modules/
+dist/
+data/
+*.log
+*.json
+!package.json
+!tsconfig.json
+.env
+.DS_Store

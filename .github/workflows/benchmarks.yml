@@ -1,0 +1,274 @@
+name: MoltShield Benchmarks
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: '0 6 * * 1'  # Weekly Monday 6am UTC
+  workflow_dispatch:
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  build:
+    name: Build & Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  unit-tests:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run unit tests
+        run: npm test
+
+  heuristic-tests:
+    name: Heuristic Tests (No LLM)
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Run heuristic-only tests
+        run: npx tsx tests/evaluator.test.ts
+        env:
+          MOLTSHIELD_HEURISTICS_ONLY: 'true'
+
+  self-patch-simulation:
+    name: Self-Patch Simulation (100 runs)
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Run 100 self-patch simulations
+        run: npx tsx tests/simulation/self-patch-sim.ts 100
+
+      - name: Check success rate >= 99%
+        run: |
+          echo "Self-patch simulation completed"
+          # Exit code from simulation handles pass/fail
+
+  harmbench-benchmark:
+    name: HarmBench Benchmark
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.event_name == 'push' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    env:
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Run HarmBench benchmark
+        run: npx tsx tests/benchmarks/harmbench.ts
+        timeout-minutes: 30
+
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: harmbench-results
+          path: harmbench-results.json
+          if-no-files-found: ignore
+
+  bon-benchmark:
+    name: Best-of-N Attack Benchmark
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.event_name == 'push' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    env:
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Run BoN attack benchmark
+        run: npx tsx tests/benchmarks/bon-attacks.ts
+        timeout-minutes: 30
+
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bon-results
+          path: bon-results.json
+          if-no-files-found: ignore
+
+  false-positive-benchmark:
+    name: False Positive Benchmark
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.event_name == 'push' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    env:
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Run false positive benchmark
+        run: npx tsx tests/benchmarks/false-positives.ts
+        timeout-minutes: 15
+
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fp-results
+          path: fp-results.json
+          if-no-files-found: ignore
+
+  local-model-test:
+    name: Local Model Test (Ollama)
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install Ollama
+        run: |
+          curl -fsSL https://ollama.ai/install.sh | sh
+          ollama serve &
+          sleep 5
+
+      - name: Pull llama3 model
+        run: ollama pull llama3:8b
+        timeout-minutes: 10
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Run tests with local model
+        run: npx tsx tests/evaluator.test.ts
+        env:
+          MOLTSHIELD_USE_LOCAL: 'true'
+          MOLTSHIELD_LOCAL_MODEL: 'llama3:8b'
+        timeout-minutes: 20
+
+  benchmark-summary:
+    name: Benchmark Summary
+    runs-on: ubuntu-latest
+    needs: [harmbench-benchmark, bon-benchmark, false-positive-benchmark, self-patch-simulation]
+    if: always() && (github.event_name == 'push' || github.event_name == 'schedule')
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: results/
+
+      - name: Generate summary
+        run: |
+          echo "# MoltShield Benchmark Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Run Date:** $(date -u)" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Benchmark | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| HarmBench | ${{ needs.harmbench-benchmark.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| BoN Attacks | ${{ needs.bon-benchmark.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| False Positives | ${{ needs.false-positive-benchmark.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Self-Patch Sim | ${{ needs.self-patch-simulation.result }} |" >> $GITHUB_STEP_SUMMARY
