@@ -73,8 +73,12 @@ async function findOpenClawInstall(): Promise<OpenClawPaths | null> {
           return { installDir, agentLoop, hookSystem };
         }
       }
-    } catch {
-      // Path doesn't exist or isn't valid
+    } catch (error: unknown) {
+      // Only ignore ENOENT (path doesn't exist) - fail noisily on other errors
+      if (error instanceof Error && 'code' in error && error.code === 'ENOENT') {
+        continue;
+      }
+      console.error(`[MoltShield] Error checking ${installDir}:`, error);
     }
   }
 

@@ -19,7 +19,6 @@
 
 ## Unordered in priority:
 
-- [ ] Integrate shiledgemma 2
 - [ ] GEPA extension (https://arxiv.org/abs/2507.19457)
 - Add cost and time benchmarks
 - Cost-benefit analysis of heuristics, might be useless overhead
@@ -37,3 +36,4 @@
 - test greyswan https://huggingface.co/collections/GraySwanAI/model-with-circuit-breakers
 - make sure NSWF doesn't get flagged, this isn't a nanny
 - routing to groq and cerebras for openrouter
+- false positive rate is too high at 4% for 50 datdp.ts might need prompt tuning or learning or user whitelisting
