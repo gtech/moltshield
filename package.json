@@ -22,6 +22,7 @@
     "patch:status": "npx tsx patch/core-patch.ts status",
     "patch:apply": "npx tsx patch/core-patch.ts apply",
     "patch:remove": "npx tsx patch/core-patch.ts remove",
+    "patch:verify": "npx tsx patch/core-patch.ts verify",
     "install:hook": "mkdir -p ~/.openclaw/hooks/moltshield && cp -r patch/* ~/.openclaw/hooks/moltshield/",
     "install:skill": "mkdir -p ~/.openclaw/workspace/skills/moltshield && cp -r skill/* ~/.openclaw/workspace/skills/moltshield/",
     "install:all": "npm run build && npm run install:hook && npm run install:skill && npm run patch:apply"
