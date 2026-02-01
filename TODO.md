@@ -11,7 +11,7 @@
 
 ## Pending
 - [ ] Use the current default inference config structure of moltbot to find what inference provider the main model is using and configure moltshield based on it
-- [ ] Revisit the architecture doc
+- [x] Revisit the architecture doc
 - [ ] Have claude give thorough walkthrough of codebase (add comments as we go and revisit arch doc)
 - [ ] Deploy to my fresh laptop with new moltbot install
 - [ ] Run full benchmarks with LLM evaluation (requires API key)
@@ -21,10 +21,15 @@
 
 - [ ] Integrate shiledgemma 2
 - [ ] GEPA extension (https://arxiv.org/abs/2507.19457)
+- Add cost and time benchmarks
+- Cost-benefit analysis of heuristics, might be useless overhead
+- Can we actually hit claude max haiku directly?
 - Research the latest from Pliny and Greyswan
 - Check for propper concurency in small model calls
 - Make sure skill install isn't heavy e.g. lazy-load submodules and depps for benchmarks
 - Remove mock from self-patch-sim.ts and run on the dev test machine
 - Quarantine system
 - Choose default small models for all major providers
-- Push to molthub
+- Push to clawdhub https://www.clawhub.com/
+- LRU cache unit test
+- consider multimodal protection

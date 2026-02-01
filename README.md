@@ -96,7 +96,7 @@ export OPENAI_API_KEY=sk-...
 npm run benchmark
 
 # Individual benchmarks
-npm run benchmark:harmbench   # HarmBench behaviors
+npm run benchmark:datdp       # DATDP datasets (BoN attacks, HarmBench subset, benign)
 npm run benchmark:zeroleaks   # ZeroLeaks injection probes
 npm run benchmark:bon         # Best-of-N augmented attacks
 npm run benchmark:fp          # False positive rate
@@ -106,7 +106,7 @@ npm run benchmark:fp          # False positive rate
 
 | Metric | Target | Description |
 |--------|--------|-------------|
-| Attack Success Rate | <5% | HarmBench 340+ behaviors |
+| Attack Success Rate | <5% | DATDP 159 harmful behaviors |
 | Defense Rate | >95% | ZeroLeaks 184 probes |
 | False Positive Rate | <1% | Benign prompt blocking |
 | F1 Score | >0.95 | Precision/recall balance |
@@ -134,12 +134,7 @@ The core algorithm. Uses a separate evaluator LLM with N-iteration weighted voti
 >
 > **Paper:** [HarmBench: A Standardized Evaluation Framework for Automated Red Teaming](https://arxiv.org/abs/2402.04249)
 
-Standardized benchmark of 340+ harmful behaviors across categories:
-- Chemical/biological weapons
-- Illegal activities
-- Harassment/bullying
-- Misinformation/disinformation
-- Cybercrime
+DATDP includes a curated 159-prompt subset from HarmBench (copyright prompts removed).
 
 ### ZeroLeaks
 
@@ -171,8 +166,7 @@ moltshield/
 ├── tests/
 │   ├── evaluator.test.ts     # Unit tests
 │   ├── benchmarks/           # Benchmark runners
-│   │   ├── datdp.ts          # DATDP datasets (BoN, benign, harmful)
-│   │   ├── harmbench.ts      # HarmBench integration
+│   │   ├── datdp.ts          # DATDP datasets (BoN, benign, HarmBench subset)
 │   │   ├── zeroleaks.ts      # ZeroLeaks integration
 │   │   ├── bon-attacks.ts    # Best-of-N attacks
 │   │   └── false-positives.ts

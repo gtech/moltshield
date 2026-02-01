@@ -7,7 +7,7 @@
  * Key features:
  * - Exact prompt structure from paper's reference implementation
  * - N-iteration weighted voting: yes=+2, no=-1, block if score >= 0
- * - Auto-detection of available evaluators (Anthropic > OpenRouter > OpenAI > Ollama)
+ * - Auto-detection of available evaluators based on what is currently available in the environment
  * - LRU cache for repeated prompts
  * - Configurable assessment tasks (safety1, safety2, weapons1-3)
  */
@@ -42,6 +42,8 @@ export interface EvaluatorConfig {
   openRouterApiKey?: string;
   /** OpenAI API key (fallback) */
   openaiApiKey?: string;
+  /** Override model name (e.g., "z-ai/glm-4.7-flash" for OpenRouter) */
+  model?: string;
   /** Force local model via Ollama */
   useLocalModel?: boolean;
   /** Local model name (default: llama3) */
@@ -274,13 +276,16 @@ async function resolveConfig(userConfig: EvaluatorConfig): Promise<ResolvedConfi
 
   // Auto-detect: Anthropic > OpenRouter > OpenAI > Ollama > Heuristics
 
+  // Model override from config or env
+  const modelOverride = userConfig.model ?? process.env.MOLTSHIELD_MODEL;
+
   // Check Anthropic
   const anthropicKey = userConfig.anthropicApiKey ?? process.env.ANTHROPIC_API_KEY;
   if (anthropicKey) {
     return {
       evaluator: "anthropic",
       apiKey: anthropicKey,
-      model: "claude-3-haiku-20240307",
+      model: modelOverride ?? "claude-3-haiku-20240307",
       endpoint: "https://api.anthropic.com/v1/messages",
       iterations: userConfig.iterations ?? 5, // Faster for API
       preamble,
@@ -298,7 +303,7 @@ async function resolveConfig(userConfig: EvaluatorConfig): Promise<ResolvedConfi
     return {
       evaluator: "openrouter",
       apiKey: openRouterKey,
-      model: "anthropic/claude-3-haiku",
+      model: modelOverride ?? "anthropic/claude-3-haiku",
       endpoint: "https://openrouter.ai/api/v1/chat/completions",
       iterations: userConfig.iterations ?? 5,
       preamble,
@@ -316,7 +321,7 @@ async function resolveConfig(userConfig: EvaluatorConfig): Promise<ResolvedConfi
     return {
       evaluator: "openai",
       apiKey: openaiKey,
-      model: "gpt-4o-mini",
+      model: modelOverride ?? "gpt-4o-mini",
       endpoint: "https://api.openai.com/v1/chat/completions",
       iterations: userConfig.iterations ?? 5,
       preamble,

@@ -38,8 +38,7 @@ moltshield/
 ├── tests/
 │   ├── evaluator.test.ts # Unit tests
 │   ├── benchmarks/       # Benchmark runners
-│   │   ├── datdp.ts      # DATDP paper datasets
-│   │   ├── harmbench.ts  # HarmBench behaviors
+│   │   ├── datdp.ts      # DATDP datasets (BoN, HarmBench subset, benign)
 │   │   ├── zeroleaks.ts  # ZeroLeaks probes
 │   │   └── ...
 │   └── fixtures/         # Test data (git submodules)
