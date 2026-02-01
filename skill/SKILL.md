@@ -53,6 +53,12 @@ npm run patch:status
 # Should show: Patch installed: Yes
 ```
 
+**Run integration test:**
+```bash
+npm run patch:verify
+# Tests: OpenClaw found, patch applied, API access, jailbreak blocked, benign passes
+```
+
 ## Persistence (Survives Updates)
 
 OpenClaw updates overwrite the patch. Set up a cron job to re-apply automatically:
