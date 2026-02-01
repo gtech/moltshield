@@ -37,3 +37,5 @@
 - make sure NSWF doesn't get flagged, this isn't a nanny
 - routing to groq and cerebras for openrouter
 - false positive rate is too high at 4% for 50 datdp.ts might need prompt tuning or learning or user whitelisting
+- bypass notification
+- context length considerations

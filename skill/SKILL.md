@@ -50,7 +50,45 @@ This builds, installs the hook, and patches OpenClaw.
 **Verify installation:**
 ```bash
 npm run patch:status
-# Should show: PATCHED
+# Should show: Patch installed: Yes
+```
+
+## Persistence (Survives Updates)
+
+OpenClaw updates overwrite the patch. Set up a cron job to re-apply automatically:
+
+```bash
+# Add to crontab (crontab -e)
+*/5 * * * * /usr/bin/npx --prefix /path/to/moltshield tsx patch/core-patch.ts apply --quiet 2>&1 | logger -t moltshield
+```
+
+Or create a systemd timer for more control:
+
+```bash
+# /etc/systemd/system/moltshield-patch.timer
+[Unit]
+Description=MoltShield patch check
+
+[Timer]
+OnBootSec=1min
+OnUnitActiveSec=5min
+
+[Install]
+WantedBy=timers.target
+```
+
+```bash
+# /etc/systemd/system/moltshield-patch.service
+[Unit]
+Description=MoltShield patch apply
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/npx --prefix /path/to/moltshield tsx patch/core-patch.ts apply --quiet
+```
+
+```bash
+sudo systemctl enable --now moltshield-patch.timer
 ```
 
 ## Configuration

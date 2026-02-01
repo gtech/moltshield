@@ -356,27 +356,45 @@ export async function removePatchFromInstall(): Promise<PatchResult> {
 // ============================================================================
 
 async function main() {
-  const command = process.argv[2];
+  const args = process.argv.slice(2);
+  const quiet = args.includes("--quiet") || args.includes("-q");
+  const command = args.find(a => !a.startsWith("-"));
 
   switch (command) {
     case "status": {
       const status = await checkPatchStatus();
-      console.log("\n=== MoltShield Patch Status ===\n");
-      console.log(`OpenClaw found: ${status.openclawFound ? "Yes" : "No"}`);
-      if (status.openclawPath) {
-        console.log(`OpenClaw path: ${status.openclawPath}`);
+      if (!quiet) {
+        console.log("\n=== MoltShield Patch Status ===\n");
+        console.log(`OpenClaw found: ${status.openclawFound ? "Yes" : "No"}`);
+        if (status.openclawPath) {
+          console.log(`OpenClaw path: ${status.openclawPath}`);
+        }
+        console.log(`Patch installed: ${status.installed ? "Yes" : "No"}`);
+        if (status.patchedFiles.length > 0) {
+          console.log(`Patched files:`);
+          status.patchedFiles.forEach(f => console.log(`  - ${f}`));
+        }
       }
-      console.log(`Patch installed: ${status.installed ? "Yes" : "No"}`);
-      if (status.patchedFiles.length > 0) {
-        console.log(`Patched files:`);
-        status.patchedFiles.forEach(f => console.log(`  - ${f}`));
-      }
-      break;
+      process.exit(status.installed ? 0 : 1);
     }
 
     case "apply": {
-      console.log("\n=== Applying MoltShield Patch ===\n");
       const result = await applyPatch();
+
+      // In quiet mode, only output if something changed or failed
+      if (quiet) {
+        if (!result.success) {
+          console.error(`[MoltShield] Error: ${result.message}`);
+          process.exit(1);
+        }
+        if (result.filesModified.length > 0) {
+          console.log(`[MoltShield] Patch applied to ${result.filesModified.length} file(s)`);
+        }
+        // Silent if already applied
+        process.exit(0);
+      }
+
+      console.log("\n=== Applying MoltShield Patch ===\n");
       console.log(`Success: ${result.success}`);
       console.log(`Message: ${result.message}`);
       if (result.filesModified.length > 0) {
@@ -391,20 +409,31 @@ async function main() {
     }
 
     case "remove": {
-      console.log("\n=== Removing MoltShield Patch ===\n");
       const result = await removePatchFromInstall();
+      if (quiet) {
+        if (!result.success) {
+          console.error(`[MoltShield] Error: ${result.message}`);
+        } else if (result.filesModified.length > 0) {
+          console.log(`[MoltShield] Patch removed`);
+        }
+        process.exit(result.success ? 0 : 1);
+      }
+      console.log("\n=== Removing MoltShield Patch ===\n");
       console.log(`Success: ${result.success}`);
       console.log(`Message: ${result.message}`);
       process.exit(result.success ? 0 : 1);
     }
 
     default:
-      console.log("Usage: npx tsx patch/core-patch.ts <command>");
+      console.log("Usage: npx tsx patch/core-patch.ts <command> [options]");
       console.log("");
       console.log("Commands:");
-      console.log("  status  - Check if patch is applied");
+      console.log("  status  - Check if patch is applied (exit 0 if applied, 1 if not)");
       console.log("  apply   - Apply the MoltShield patch");
       console.log("  remove  - Remove the MoltShield patch");
+      console.log("");
+      console.log("Options:");
+      console.log("  -q, --quiet  - Only output on changes or errors (for cron)");
       process.exit(1);
   }
 }
