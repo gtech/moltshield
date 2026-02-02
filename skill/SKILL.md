@@ -53,6 +53,12 @@ npm run patch:status
 # Should show: Patch installed: Yes
 ```
 
+**Run integration test:**
+```bash
+npm run patch:verify
+# Tests: OpenClaw found, patch applied, API access, jailbreak blocked, benign passes
+```
+
 ## Persistence (Survives Updates)
 
 OpenClaw updates overwrite the patch. Set up a cron job to re-apply automatically:
@@ -95,15 +101,18 @@ sudo systemctl enable --now moltshield-patch.timer
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `ANTHROPIC_API_KEY` | - | Use Claude Haiku |
+| `ANTHROPIC_API_KEY` | - | Use Claude Haiku (API key) |
+| `MOLTSHIELD_USE_OPENCLAW_AUTH` | `true` | Use OpenClaw's stored auth (Max plan) |
 | `OPENROUTER_API_KEY` | - | Use OpenRouter |
 | `OPENAI_API_KEY` | - | Use OpenAI |
 | `MOLTSHIELD_ITERATIONS` | `5` | DATDP voting iterations |
 | `MOLTSHIELD_HEURISTICS_ONLY` | `false` | Skip DATDP (for benchmarking) |
 | `MOLTSHIELD_VERBOSE` | `false` | Enable debug logging |
 
+**Max Plan Support:** MoltShield automatically uses your OpenClaw credentials if no API key is set. This means Max plan subscribers can use Haiku for evaluation without additional configuration.
+
 **Default:** DATDP runs on every input (evaluator calls are cheap).
-**Evaluator priority:** Anthropic → OpenRouter → OpenAI → Ollama → Heuristics-only
+**Evaluator priority:** API Key → OpenClaw Auth (Max plan) → OpenRouter → OpenAI → Ollama → Heuristics-only
 
 ## When You See Suspicious Content
 
