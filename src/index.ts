@@ -11,4 +11,5 @@ export {
   type EvaluatorConfig,
   type HeuristicResult,
   type AssessmentTask,
+  type DATDPResult,
 } from "./evaluator.js";
