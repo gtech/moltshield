@@ -400,9 +400,13 @@ export async function verifyPatch(): Promise<VerifyResult> {
   }
 
   // Check 3: MoltShield module can be imported
-  let moltshield: { evaluatePrompt: Function; shouldBlock: Function } | null = null;
+  // Import from relative path (works during development and when installed)
+  let evaluatePrompt: Function;
+  let shouldBlock: Function;
   try {
-    moltshield = await import("moltshield");
+    const module = await import("../src/evaluator.js");
+    evaluatePrompt = module.evaluatePrompt;
+    shouldBlock = module.shouldBlock;
     checks.push({
       name: "MoltShield import",
       passed: true,
@@ -421,11 +425,11 @@ export async function verifyPatch(): Promise<VerifyResult> {
   let hasApiAccess = false;
   try {
     // Quick test with short timeout
-    const testResult = await moltshield.evaluatePrompt("test", {
+    const testResult = await evaluatePrompt("test", {
       timeout: 10000,
       iterations: 1,
     });
-    hasApiAccess = testResult && typeof testResult.blocked === "boolean";
+    hasApiAccess = testResult && typeof testResult.safe === "boolean";
     checks.push({
       name: "Evaluator API access",
       passed: hasApiAccess,
@@ -447,17 +451,17 @@ export async function verifyPatch(): Promise<VerifyResult> {
 
   // Check 5: Known jailbreak gets blocked
   try {
-    const jailbreakResult = await moltshield.evaluatePrompt(TEST_JAILBREAK, {
+    const jailbreakResult = await evaluatePrompt(TEST_JAILBREAK, {
       timeout: 15000,
       iterations: 3,
     });
-    const blocked = moltshield.shouldBlock(jailbreakResult);
+    const blocked = shouldBlock(jailbreakResult);
     checks.push({
       name: "Jailbreak detection",
       passed: blocked,
       message: blocked
-        ? `Blocked with score ${jailbreakResult.score}`
-        : `FAILED: Jailbreak was not blocked (score: ${jailbreakResult.score})`,
+        ? `Blocked with score ${jailbreakResult.datdp?.score ?? "N/A"}`
+        : `FAILED: Jailbreak was not blocked (score: ${jailbreakResult.datdp?.score ?? "N/A"})`,
     });
 
     if (!blocked) {
@@ -474,17 +478,17 @@ export async function verifyPatch(): Promise<VerifyResult> {
 
   // Check 6: Benign prompt passes through
   try {
-    const benignResult = await moltshield.evaluatePrompt(TEST_BENIGN, {
+    const benignResult = await evaluatePrompt(TEST_BENIGN, {
       timeout: 15000,
       iterations: 3,
     });
-    const passed = !moltshield.shouldBlock(benignResult);
+    const passed = !shouldBlock(benignResult);
     checks.push({
       name: "Benign prompt passthrough",
       passed: passed,
       message: passed
-        ? `Allowed with score ${benignResult.score}`
-        : `WARNING: Benign prompt was blocked (score: ${benignResult.score})`,
+        ? `Allowed with score ${benignResult.datdp?.score ?? "N/A"}`
+        : `WARNING: Benign prompt was blocked (score: ${benignResult.datdp?.score ?? "N/A"})`,
     });
   } catch (err) {
     checks.push({
