@@ -12,6 +12,10 @@
  * - Configurable assessment tasks (safety1, safety2, weapons1-3)
  */
 
+// Import and re-export heuristics from separate module
+import { runHeuristics, type HeuristicResult } from "./heuristics.js";
+export { runHeuristics, type HeuristicResult };
+
 // ============================================================================
 // Types
 // ============================================================================
@@ -92,6 +96,8 @@ export interface EvaluatorConfig {
   noCache?: boolean;
   /** DATDP block threshold - block if score >= threshold (default: 0, paper default) */
   blockThreshold?: number;
+  /** Skip heuristic checks, use LLM only (default: true - heuristics off by default) */
+  skipHeuristics?: boolean;
   /** Enable CCFC dual-track evaluation (default: false) */
   useCCFC?: boolean;
   /** Use OpenClaw's stored auth (Max plan OAuth) */
@@ -115,6 +121,7 @@ interface ResolvedConfig {
   imageTimeout: number;
   noCache: boolean;
   blockThreshold: number;
+  skipHeuristics: boolean;
   useCCFC: boolean;
 }
 
@@ -181,49 +188,10 @@ function buildUserPrompt(content: string): string {
 const CACHE_MAX_SIZE = 1000;
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
-/**
- * Injection markers commonly found in tool results (indirect injection)
- */
-const INJECTION_MARKERS = [
-  /<\|im_start\|>/i,
-  /<\|im_end\|>/i,
-  /\[INST\]/i,
-  /\[\/INST\]/i,
-  /### System:/i,
-  /### Human:/i,
-  /### Assistant:/i,
-  /<\|system\|>/i,
-  /<\|user\|>/i,
-  /<\|assistant\|>/i,
-  /\[SYSTEM\]/i,
-  /<<SYS>>/i,
-  /<\/SYS>>/i,
-];
 
 /**
  * Jailbreak patterns
  */
-const JAILBREAK_PATTERNS = [
-  { pattern: /ignore\s+(all\s+)?(previous|prior|above|system)/i, weight: 5 },
-  { pattern: /you\s+are\s+now\s+(a|an|the|my)/i, weight: 4 },
-  { pattern: /pretend\s+(you('re)?|to\s+be)/i, weight: 3 },
-  { pattern: /bypass\s+(your|the|all|any)/i, weight: 4 },
-  { pattern: /disregard\s+(your|the|all|any)/i, weight: 4 },
-  { pattern: /from\s+now\s+on/i, weight: 3 },
-  { pattern: /developer\s+mode/i, weight: 5 },
-  { pattern: /jailbreak/i, weight: 5 },
-  { pattern: /DAN\s*(mode)?/i, weight: 5 },
-  { pattern: /do\s+anything\s+now/i, weight: 5 },
-  { pattern: /act\s+as\s+(a|an|if)/i, weight: 2 },
-  { pattern: /roleplay\s+as/i, weight: 2 },
-  { pattern: /new\s+conversation/i, weight: 2 },
-  { pattern: /reset\s+(your|the)\s+(context|memory|instructions)/i, weight: 4 },
-  { pattern: /you\s+have\s+no\s+(restrictions|limits|rules)/i, weight: 5 },
-  { pattern: /unlock(ed)?\s+(mode|capabilities)/i, weight: 4 },
-  { pattern: /hypothetical\s+(world|scenario|situation)/i, weight: 3 },
-  { pattern: /in\s+a\s+world\s+where/i, weight: 3 },
-  { pattern: /let'?s\s+(say|pretend|imagine)/i, weight: 2 },
-];
 
 // ============================================================================
 // Cache
@@ -405,6 +373,7 @@ async function resolveConfig(userConfig: EvaluatorConfig): Promise<ResolvedConfi
   const imageTimeout = userConfig.imageTimeout ?? 30000; // Images take longer
   const noCache = userConfig.noCache ?? false;
   const blockThreshold = userConfig.blockThreshold ?? parseInt(process.env.MOLTSHIELD_BLOCK_THRESHOLD ?? "0");
+  const skipHeuristics = userConfig.skipHeuristics ?? process.env.MOLTSHIELD_SKIP_HEURISTICS !== "false"; // Default: true (heuristics off)
   const useCCFC = userConfig.useCCFC ?? process.env.MOLTSHIELD_CCFC === "true";
 
   // Get assessment task parameters
@@ -435,6 +404,7 @@ async function resolveConfig(userConfig: EvaluatorConfig): Promise<ResolvedConfi
       imageTimeout,
       noCache,
       blockThreshold,
+      skipHeuristics,
       useCCFC,
     };
   }
@@ -451,9 +421,9 @@ async function resolveConfig(userConfig: EvaluatorConfig): Promise<ResolvedConfi
       evaluator: "anthropic",
       apiKey: anthropicKey,
       model: modelOverride ?? "claude-haiku-4-5-20251001",
-      visionModel: visionModelOverride ?? "claude-haiku-4-5-20251001", // Haiku has vision
+      visionModel: visionModelOverride ?? "claude-haiku-4-5-20251001",
       endpoint: "https://api.anthropic.com/v1/messages",
-      iterations: userConfig.iterations ?? 5, // Faster for API
+      iterations: userConfig.iterations ?? 5,
       preamble,
       instruction,
       forbiddenTask,
@@ -462,6 +432,7 @@ async function resolveConfig(userConfig: EvaluatorConfig): Promise<ResolvedConfi
       imageTimeout,
       noCache,
       blockThreshold,
+      skipHeuristics,
       useCCFC,
     };
   }
@@ -487,6 +458,7 @@ async function resolveConfig(userConfig: EvaluatorConfig): Promise<ResolvedConfi
         imageTimeout,
         noCache,
         blockThreshold,
+        skipHeuristics,
         useCCFC,
       };
     }
@@ -507,6 +479,7 @@ async function resolveConfig(userConfig: EvaluatorConfig): Promise<ResolvedConfi
         imageTimeout,
         noCache,
         blockThreshold,
+        skipHeuristics,
         useCCFC,
       };
     }
@@ -518,8 +491,8 @@ async function resolveConfig(userConfig: EvaluatorConfig): Promise<ResolvedConfi
     return {
       evaluator: "openrouter",
       apiKey: openRouterKey,
-      model: modelOverride ?? "anthropic/claude-haiku-4-5",
-      visionModel: visionModelOverride ?? "anthropic/claude-haiku-4-5", // Haiku has vision
+      model: modelOverride ?? "openai/gpt-oss-120b",
+      visionModel: visionModelOverride ?? "openai/gpt-4o-mini",
       endpoint: "https://openrouter.ai/api/v1/chat/completions",
       iterations: userConfig.iterations ?? 5,
       preamble,
@@ -530,6 +503,7 @@ async function resolveConfig(userConfig: EvaluatorConfig): Promise<ResolvedConfi
       imageTimeout,
       noCache,
       blockThreshold,
+      skipHeuristics,
       useCCFC,
     };
   }
@@ -552,6 +526,7 @@ async function resolveConfig(userConfig: EvaluatorConfig): Promise<ResolvedConfi
       imageTimeout,
       noCache,
       blockThreshold,
+      skipHeuristics,
       useCCFC,
     };
   }
@@ -580,6 +555,7 @@ async function resolveConfig(userConfig: EvaluatorConfig): Promise<ResolvedConfi
         imageTimeout,
         noCache,
         blockThreshold,
+        skipHeuristics,
         useCCFC,
       };
     }
@@ -603,96 +579,12 @@ async function resolveConfig(userConfig: EvaluatorConfig): Promise<ResolvedConfi
     imageTimeout,
     noCache,
     blockThreshold,
+    skipHeuristics,
     useCCFC,
   };
 }
 
-// ============================================================================
-// Heuristic Checks
-// ============================================================================
-
-export interface HeuristicResult {
-  score: number;
-  flags: string[];
-  details: Record<string, number>;
-}
-
-/**
- * Fast heuristic checks - runs before LLM evaluation
- */
-export function runHeuristics(content: string): HeuristicResult {
-  const flags: string[] = [];
-  const details: Record<string, number> = {};
-  let score = 0;
-
-  // 1. Invisible characters (zero-width spaces, etc.)
-  const invisibleChars = content.match(/[\u200B-\u200D\uFEFF\u2060\u00AD]/g);
-  if (invisibleChars && invisibleChars.length > 2) {
-    flags.push("invisible_characters");
-    details.invisible_characters = invisibleChars.length;
-    score += Math.min(invisibleChars.length, 5);
-  }
-
-  // 2. Excessive mixed case (Best-of-N signature)
-  const words = content.split(/\s+/).filter(w => w.length > 3);
-  const mixedCaseWords = words.filter(
-    w => /[a-z]/.test(w) && /[A-Z]/.test(w) && !/^[A-Z][a-z]+$/.test(w)
-  );
-  const mixedCaseRatio = words.length > 0 ? mixedCaseWords.length / words.length : 0;
-  if (mixedCaseRatio > 0.25) {
-    flags.push("excessive_mixed_case");
-    details.mixed_case_ratio = Math.round(mixedCaseRatio * 100);
-    score += Math.round(mixedCaseRatio * 10);
-  }
-
-  // 3. Jailbreak patterns
-  for (const { pattern, weight } of JAILBREAK_PATTERNS) {
-    if (pattern.test(content)) {
-      if (!flags.includes("jailbreak_pattern")) {
-        flags.push("jailbreak_pattern");
-      }
-      details[`pattern_${pattern.source.slice(0, 20)}`] = weight;
-      score += weight;
-    }
-  }
-
-  // 4. Injection markers (critical for tool results)
-  for (const marker of INJECTION_MARKERS) {
-    if (marker.test(content)) {
-      if (!flags.includes("injection_marker")) {
-        flags.push("injection_marker");
-      }
-      score += 5;
-      break;
-    }
-  }
-
-  // 5. Base64 encoded content (potential payload)
-  const base64Match = content.match(/[A-Za-z0-9+/]{30,}={0,2}/);
-  if (base64Match) {
-    flags.push("encoded_content");
-    details.base64_length = base64Match[0].length;
-    score += 4;
-  }
-
-  // 6. Unicode confusables/homoglyphs
-  const confusables = content.match(/[\u0430-\u044F\u0410-\u042F\u03B1-\u03C9]/g);
-  if (confusables && confusables.length > 3) {
-    flags.push("unicode_confusables");
-    details.confusables = confusables.length;
-    score += 3;
-  }
-
-  // 7. Excessive punctuation (often used in attacks)
-  const punctuationRatio = (content.match(/[!?]{2,}/g) || []).length;
-  if (punctuationRatio > 3) {
-    flags.push("excessive_punctuation");
-    details.punctuation_clusters = punctuationRatio;
-    score += 2;
-  }
-
-  return { score, flags, details };
-}
+// Heuristics are imported from ./heuristics.ts
 
 // ============================================================================
 // LLM Evaluators
@@ -1043,15 +935,17 @@ export async function evaluatePrompt(
     }
   }
 
-  // Run heuristics
-  const heuristics = runHeuristics(content);
+  // Run heuristics (unless disabled)
+  const heuristics = config.skipHeuristics
+    ? { score: 0, flags: [], details: {} }
+    : runHeuristics(content);
 
-  if (config.verbose) {
+  if (config.verbose && !config.skipHeuristics) {
     console.log(`[MoltShield] Heuristic score: ${heuristics.score}, flags: ${heuristics.flags.join(", ")}`);
   }
 
-  // If heuristics score is very high, block immediately without LLM
-  if (heuristics.score >= 10) {
+  // If heuristics score is very high, block immediately without LLM (only if heuristics enabled)
+  if (!config.skipHeuristics && heuristics.score >= 10) {
     const result: EvaluationResult = {
       safe: false,
       confidence: 0.95,

@@ -16,6 +16,7 @@
     "test": "npx tsx tests/evaluator.test.ts",
     "benchmark": "npm run benchmark:datdp && npm run benchmark:zeroleaks && npm run benchmark:bon && npm run benchmark:fp",
     "benchmark:datdp": "npx tsx tests/benchmarks/datdp.ts",
+    "benchmark:compare": "npx tsx tests/benchmarks/compare-datdp-ccfc.ts",
     "benchmark:zeroleaks": "npx tsx tests/benchmarks/zeroleaks.ts",
     "benchmark:bon": "npx tsx tests/benchmarks/bon-attacks.ts",
     "benchmark:fp": "npx tsx tests/benchmarks/false-positives.ts",
@@ -37,6 +38,7 @@
   "license": "MIT",
   "devDependencies": {
     "@types/node": "^25.1.0",
+    "dotenv": "^17.2.3",
     "tsx": "^4.21.0",
     "typescript": "^5.8.2"
   }
