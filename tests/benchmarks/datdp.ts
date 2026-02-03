@@ -99,6 +99,7 @@ async function runDatasetBenchmark(
     const heuristics = runHeuristics(prompt);
     const heuristicBlocked = heuristics.score >= 10;
 
+    const evalStartTime = Date.now();
     try {
       const evalResult = await evaluatePrompt(prompt, {
         verbose: false,
@@ -107,15 +108,17 @@ async function runDatasetBenchmark(
       });
 
       const blocked = shouldBlock(evalResult);
+      const durationMs = Date.now() - evalStartTime;
 
-      // Create log entry
+      // Create log entry with timing
       logEntries.push(createLogEntry(
         prompt,
         datasetName,
         expectBlock,
         heuristics,
         evalResult,
-        blocked
+        blocked,
+        { durationMs, iterations: 3 }
       ));
 
       return {
