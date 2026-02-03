@@ -11,7 +11,9 @@
  * - augmented_prompts_samples.csv (1590 augmented samples)
  */
 
-import { evaluatePrompt, shouldBlock, runHeuristics } from "../../src/evaluator.js";
+import "dotenv/config";
+import { evaluatePrompt, shouldBlock, runHeuristics, type EvaluationResult } from "../../src/evaluator.js";
+import { logBatch, createLogEntry, type EvaluationLogEntry } from "./logger.js";
 import * as fs from "fs/promises";
 import * as path from "path";
 
@@ -90,6 +92,8 @@ async function runDatasetBenchmark(
   };
 
   // Run all prompts in parallel
+  const logEntries: EvaluationLogEntry[] = [];
+
   const evalPromises = prompts.map(async (prompt) => {
     // Check heuristics
     const heuristics = runHeuristics(prompt);
@@ -102,9 +106,21 @@ async function runDatasetBenchmark(
         timeout: 15000,
       });
 
+      const blocked = shouldBlock(evalResult);
+
+      // Create log entry
+      logEntries.push(createLogEntry(
+        prompt,
+        datasetName,
+        expectBlock,
+        heuristics,
+        evalResult,
+        blocked
+      ));
+
       return {
         prompt,
-        blocked: shouldBlock(evalResult),
+        blocked,
         heuristicBlocked,
         error: false,
       };
@@ -120,6 +136,9 @@ async function runDatasetBenchmark(
   });
 
   const evalResults = await Promise.all(evalPromises);
+
+  // Log all evaluations
+  await logBatch(logEntries, "datdp-evaluations.jsonl");
 
   for (const { prompt, blocked, heuristicBlocked, error } of evalResults) {
     if (heuristicBlocked) {
