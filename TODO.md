@@ -37,6 +37,13 @@
 - reconcile benchmarks and benchmarks-sentinel_v2
 - add escalation framework
 - break auth and config into plugin lifecycle?
+- honestly see if those prompts work for images
+- reexamine cc++ and cfcc prompts vs paper
+- normalization module alongside heuristic module.
+- rewrite arch docs; dedup arch from contributors.md
+- TraceEntry node naming: use fixed `type` field for programmatic matching, keep descriptive `node` for display
+- CCFC timeout issue in parallel benchmarks (makes 3x API calls, needs longer timeout or rate limiting)
+- Add `data/` to .gitignore
 
 - Push to clawdhub https://www.clawhub.com/
 
@@ -44,9 +51,9 @@
 
 - diversity of small models that update in order to avoid mode collapse
 - manually check change log of streamfn
-- edgecase: when the response is an image
 - git actions for small benchmark 
 - compete against laka, prompt-guard, and hive
+- consider adding hive
 
 ## Post-launch
 
