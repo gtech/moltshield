@@ -14,6 +14,7 @@
   "scripts": {
     "build": "tsc",
     "test": "npx tsx tests/evaluator.test.ts",
+    "test:integration": "npx tsx tests/integration/baseline-validation.ts",
     "benchmark": "npm run benchmark:datdp && npm run benchmark:zeroleaks && npm run benchmark:bon && npm run benchmark:fp",
     "benchmark:datdp": "npx tsx tests/benchmarks/datdp.ts",
     "benchmark:compare": "npx tsx tests/benchmarks/compare-datdp-ccfc.ts",

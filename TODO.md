@@ -18,6 +18,7 @@
 ## Pending
 - [ ] Use the current default inference config structure of moltbot to find what inference provider the main model is using and configure moltshield based on it
 - [x] Revisit the architecture doc
+- [x] CCFC Extension Merge (Jim @arealjim) https://arxiv.org/html/2508.14128v1
 - [ ] Deploy to cloud instance
 - [ ] Test self-patching reliability, including cron graceful failover
 - [ ] **Benchmark scripts: DATDP vs CCFC vs Exchange classifier** - Create scripts to pit the three approaches against HarmBench, ZeroLeaks, and BoN benchmarks. Measure ASR, FPR, F1, latency, and cost per evaluation.
@@ -26,7 +27,6 @@
 - LRU cache unit test
 - routing to groq and cerebras for openrouter
 - send bypass notification to user 
-- CCFC Extension Merge (Jim @arealjim) https://arxiv.org/html/2508.14128v1
 - context length considerations, make sure context length of the main model doesn't overwhelm smaller models
 - test that haiku is reached directly in max plan
 - add response filtering step as per pg 13 of DATDP, as well as paraphrasing 
@@ -34,6 +34,9 @@
 - Make sure skill install isn't heavy e.g. lazy-load submodules and depps for benchmarks
 - Choose default small models for all major providers
 - github actions basic sanity unit tests
+- reconcile benchmarks and benchmarks-sentinel_v2
+- add escalation framework
+- break auth and config into plugin lifecycle?
 
 - Push to clawdhub https://www.clawhub.com/
 
