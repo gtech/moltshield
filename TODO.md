@@ -74,31 +74,62 @@ Understanding what each layer catches:
 ## Benchmark Framework Requirements
 
 ### Data Management
-- [ ] Runtime loading from submodules (ZeroLeaks, AgentDojo, InjecAgent, NotInject)
-- [ ] Subset selection: by category, by count, by ID pattern
-- [ ] Curated datasets in `datasets.ts` for regression testing
-- [ ] All results saved with full metadata (for future classifier training)
+- [x] Runtime loading from submodules (ZeroLeaks, AgentDojo, InjecAgent, NotInject, BIPIA)
+- [x] Subset selection: by category, by count, by ID pattern
+- [x] Curated datasets in `datasets.ts` for regression testing
+- [x] All results saved with full metadata (for future classifier training)
+- [x] Unit tests for loaders (64 tests)
+
+**Dataset totals:**
+| Source | Injection | Benign | Notes |
+|--------|-----------|--------|-------|
+| Curated | 43 | 60 | Hand-crafted scenarios |
+| ZeroLeaks | 264 | - | 16 attack categories |
+| InjecAgent | 2,108 | - | Tool-integrated attacks |
+| AgentDojo | 457-5000+ | 337 | Multi-turn agentic (depends on model/attack types) |
+| NotInject | - | 339 | Benign with trigger words |
+| BIPIA | 50 | 25 | Code/text injection |
 
 ### Execution
-- [ ] Parallel execution with configurable concurrency
+- [x] Parallel execution with configurable concurrency
 - [ ] LPU/fast inference routing (Groq, Cerebras via OpenRouter)
-- [ ] Timeout and retry handling with exponential backoff
-- [ ] Progress reporting (ETA, throughput)
+- [x] Timeout and retry handling
+- [x] Progress reporting
 
 ### Metrics & Reporting
-- [ ] Per-category breakdown (TPR for delimiter vs exfil vs persona)
-- [ ] Cost tracking (input/output tokens, dollars)
-- [ ] Latency percentiles (p50, p95, p99)
-- [ ] Confusion matrix and F1 per attack type
-- [ ] JSON + human-readable output
+- [x] Per-category breakdown (TPR for delimiter vs exfil vs persona)
+- [x] Cost tracking (input/output tokens, dollars)
+- [x] Latency percentiles (p50, p95, p99)
+- [x] Confusion matrix and F1 per attack type
+- [x] JSON + human-readable output
 
 ### Composability
-- [ ] Test single classifier in isolation
+- [x] Test single classifier in isolation (harness.ts)
 - [ ] Test A→B serial cascade (escalation)
 - [ ] Test A∥B parallel (any/all blocking modes)
 - [ ] Test full pipeline: heuristics → classifier → exchange → escalate
 
 ---
+
+## Attack Taxonomy & Future Coverage
+
+See `tests/benchmarks/attack-taxonomy.ts` for full documentation.
+
+### Current Coverage Gaps
+- [ ] AgentDojo: Load all attack types (not just important_instructions)
+- [ ] Multi-turn attack evaluation framework
+- [ ] Encoding augmentation pipeline (apply ZeroLeaks encodings to any payload)
+- [ ] Attack-type-specific metrics in benchmark reports
+
+### AgentDojo Attack Types Available
+| Attack Type | gpt-4o | claude-3 | Notes |
+|-------------|--------|----------|-------|
+| important_instructions | ✓ 565 | ✓ 80 | Primary attack |
+| direct | ✓ 569 | - | "TODO: {goal}" |
+| ignore_previous | ✓ 565 | - | Classic override |
+| tool_knowledge | ✓ 567 | - | Includes tool schemas |
+| injecagent | ✓ 570 | - | InjecAgent-style |
+| variants (no_names, etc) | ✓ 2000+ | - | Parameterization tests |
 
 ### Future Work (Post-MVP)
 - Community-maintained classifier registry
