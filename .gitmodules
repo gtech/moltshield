@@ -1,9 +1,15 @@
 [submodule "tests/fixtures/zeroleaks"]
 	path = tests/fixtures/zeroleaks
 	url = https://github.com/ZeroLeaks/zeroleaks.git
-[submodule "tests/fixtures/datdp"]
-	path = tests/fixtures/datdp
-	url = https://github.com/alignedai/DATDP.git
 [submodule "tests/fixtures/openclaw"]
 	path = tests/fixtures/openclaw
 	url = https://github.com/openclaw/openclaw
+[submodule "tests/fixtures/agentdojo"]
+	path = tests/fixtures/agentdojo
+	url = https://github.com/ethz-spylab/agentdojo
+[submodule "tests/fixtures/injecagent"]
+	path = tests/fixtures/injecagent
+	url = https://github.com/uiuc-kang-lab/InjecAgent
+[submodule "tests/fixtures/injecguard"]
+	path = tests/fixtures/injecguard
+	url = https://github.com/InjecGuard/InjecGuard

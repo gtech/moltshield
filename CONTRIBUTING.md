@@ -38,12 +38,14 @@ moltshield/
 ├── tests/
 │   ├── evaluator.test.ts # Unit tests
 │   ├── benchmarks/       # Benchmark runners
-│   │   ├── datdp.ts      # DATDP datasets (BoN, HarmBench subset, benign)
-│   │   ├── zeroleaks.ts  # ZeroLeaks probes
-│   │   └── ...
+│   │   ├── zeroleaks.ts  # ZeroLeaks injection probes
+│   │   ├── false-positives.ts # FPR testing
+│   │   └── strategy-comparison.ts # Strategy comparison
 │   └── fixtures/         # Test data (git submodules)
-│       ├── datdp/        # github.com/alignedai/DATDP
-│       └── zeroleaks/    # github.com/ZeroLeaks/zeroleaks
+│       ├── zeroleaks/    # Injection probes
+│       ├── agentdojo/    # Agentic scenarios
+│       ├── injecagent/   # Tool-integrated tests
+│       └── injecguard/   # Over-defense tests
 └── data/                 # Benchmark results (gitignored)
 ```
 

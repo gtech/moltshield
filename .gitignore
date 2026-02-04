@@ -7,3 +7,4 @@ data/
 !tsconfig.json
 .env
 .DS_Store
+.venv/
