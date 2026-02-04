@@ -1,38 +1,26 @@
-# MoltShield 🛡️
+# MoltShield
 
-**Pre-inference defense for OpenClaw using DATDP (Defense Against The Dark Prompts)**
+**Composable pre-inference defense for LLM applications**
 
-MoltShield protects AI agents from jailbreak attacks, prompt injection, and adversarial content by evaluating every inference call before it reaches the main model.
+MoltShield protects AI agents from prompt injection, jailbreaks, and adversarial content using a composable strategy tree of detection methods.
 
-## How It Works
+## Features
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                    Context Assembly                          │
-│   User messages + Tool results + System prompt + Memory      │
-└─────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────┐
-│                 MoltShield Pre-Inference                     │
-│                                                              │
-│   1. Heuristic scan (instant)                                │
-│      - Invisible chars, mixed case, jailbreak patterns       │
-│      - Injection markers in tool results                     │
-│                                                              │
-│   2. DATDP N-iteration evaluation (if needed)                │
-│      - Separate evaluator LLM analyzes content               │
-│      - Weighted voting: yes=+2, no=-1                        │
-│      - Rewind if score >= 0                                  │
-│                                                              │
-│   → REWIND (strip bad content, notify model, continue)       │
-│   → PASS (proceed to main model)                             │
-└─────────────────────────────────────────────────────────────┘
-                              │ PASS
-                              ▼
-┌─────────────────────────────────────────────────────────────┐
-│                   Main Model (e.g. Opus 4.5)                │
-└─────────────────────────────────────────────────────────────┘
+- **Composable Strategies** - Mix heuristics, DATDP, CCFC, and custom classifiers
+- **Multi-Provider Support** - Anthropic, OpenAI, OpenRouter, Ollama, Groq
+- **Pre & Post Inference** - Evaluate prompts before inference, exchanges after
+- **Image Support** - Analyze images for adversarial content
+- **Caching** - LRU caches for repeated evaluations
+
+## Quick Start
+
+```typescript
+import { evaluatePrompt, shouldBlock } from "moltshield";
+
+const result = await evaluatePrompt("user input here");
+if (shouldBlock(result)) {
+  console.log("Blocked:", result.reasoning);
+}
 ```
 
 ## Installation
@@ -45,178 +33,224 @@ cd moltshield
 # Install dependencies
 pnpm install
 
-# Build and install to OpenClaw
-npm run install:all
+# Build
+npm run build
+```
+
+## Strategy System
+
+MoltShield uses a composable strategy tree. Each node returns `pass`, `block`, or `escalate`.
+
+### Built-in Strategies
+
+```typescript
+import { evaluatePrompt, PRESET_DATDP, PRESET_CCFC } from "moltshield";
+
+// DATDP - N-iteration weighted voting (default)
+const result = await evaluatePrompt(content, { strategy: PRESET_DATDP });
+
+// CCFC - Context-Centric Few-Shot Classification
+const result = await evaluatePrompt(content, { strategy: PRESET_CCFC });
+
+// Heuristics only (fast, no LLM calls)
+const result = await evaluatePrompt(content, { strategy: { type: "heuristics" } });
+```
+
+### Custom Strategy Trees
+
+```typescript
+import { execute, resolveConfig } from "moltshield";
+
+const config = await resolveConfig({ model: "claude-sonnet-4-20250514" });
+
+// Serial execution: stop on first block
+const serial = await execute(content, {
+  type: "serial",
+  steps: [
+    { type: "heuristics", blockAbove: 10, escalateAbove: 3 },
+    { type: "datdp", iterations: 5 },
+  ]
+}, config);
+
+// Branching: different paths based on verdict
+const branched = await execute(content, {
+  type: "branch",
+  on: { type: "heuristics", escalateAbove: 3 },
+  pass: { type: "pass" },
+  escalate: { type: "datdp" },
+  block: { type: "block" },
+}, config);
+
+// Nested (matryoshka): CCFC extract then evaluate core
+const nested = await execute(content, {
+  type: "nest",
+  transform: { type: "ccfc-extract" },
+  inner: { type: "datdp" },
+}, config);
+```
+
+## Classifiers
+
+| Classifier | Type | Description |
+|------------|------|-------------|
+| **Heuristics** | Pre-inference | Pattern matching for injection markers, unicode tricks, delimiter attacks |
+| **DATDP** | Pre-inference | N-iteration weighted voting with evaluator LLM |
+| **CCFC** | Pre-inference | Context-Centric Few-Shot Classification - extracts "core" intent |
+| **Exchange** | Post-inference | Evaluates input+response pairs for manipulation |
+
+### Post-Inference Exchange Evaluation
+
+```typescript
+import { evaluateExchange, resolveConfig } from "moltshield";
+
+const config = await resolveConfig();
+const result = await evaluateExchange(userInput, modelResponse, config);
+
+if (!result.safe) {
+  console.log("Manipulation detected:", result.reasoning);
+}
+```
+
+### Image Evaluation
+
+```typescript
+import { evaluateImage, resolveConfig } from "moltshield";
+
+const config = await resolveConfig();
+const result = await evaluateImage(base64ImageData, config);
+
+if (!result.safe) {
+  console.log("Unsafe image:", result.reasoning);
+}
 ```
 
 ## Configuration
-
-Set your preferred evaluator API key:
-
-```bash
-# Option 1: Anthropic
-export ANTHROPIC_API_KEY=sk-ant-...
-
-# Option 2: OpenRouter
-export OPENROUTER_API_KEY=sk-or-...
-
-# Option 3: OpenAI
-export OPENAI_API_KEY=sk-...
-
-# Option 4: Local (Ollama)
-# No key needed, just run: ollama serve
-```
 
 ### Environment Variables
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `MOLTSHIELD_ITERATIONS` | `5` (API) / `25` (local) | DATDP voting iterations |
-| `MOLTSHIELD_TASK` | `safety1` | Assessment task (see below) |
+| `MOLTSHIELD_MODEL` | auto-detected | Evaluator model (e.g., `claude-sonnet-4-20250514`) |
+| `MOLTSHIELD_ITERATIONS` | `5` | DATDP voting iterations |
+| `MOLTSHIELD_TASK` | `safety1` | Assessment task |
 | `MOLTSHIELD_TIMEOUT` | `10000` | Timeout per evaluation (ms) |
 | `MOLTSHIELD_VERBOSE` | `false` | Enable debug logging |
-| `MOLTSHIELD_HEURISTICS_ONLY` | `false` | Skip DATDP, use heuristics only |
 
-**Default:** DATDP runs on every input. Set `MOLTSHIELD_HEURISTICS_ONLY=true` for benchmarking or cost-sensitive deployments.
+### API Keys (in priority order)
+
+```bash
+export ANTHROPIC_API_KEY=sk-ant-...    # Anthropic
+export OPENROUTER_API_KEY=sk-or-...    # OpenRouter
+export OPENAI_API_KEY=sk-...           # OpenAI
+export GROQ_API_KEY=gsk_...            # Groq
+# Or run Ollama locally (no key needed)
+```
 
 ### Assessment Tasks
 
 | Task | Focus |
 |------|-------|
 | `safety1` | General jailbreak and dangerous content (default) |
-| `safety2` | AI safety focused - manipulation and bypass attempts |
-| `weapons1` | CBRN content detection (light) |
-| `weapons2` | CBRN technical details (medium) |
-| `weapons3` | CBRN actionable instructions (strict) |
+| `safety2` | AI safety - manipulation and bypass attempts |
+| `injection1` | Prompt injection detection |
+| `weapons1-3` | CBRN content (light → strict) |
 
 ## Benchmarks
 
-```bash
-# Run all benchmarks
-npm run benchmark
+MoltShield includes a comprehensive benchmarking framework with 2800+ test cases.
 
-# Individual benchmarks
-npm run benchmark:datdp       # DATDP datasets (BoN attacks, HarmBench subset, benign)
-npm run benchmark:zeroleaks   # ZeroLeaks injection probes
-npm run benchmark:bon         # Best-of-N augmented attacks
-npm run benchmark:fp          # False positive rate
+```bash
+# Run classifier comparison (PG2, DeBERTa)
+npx tsx tests/benchmarks/experiments/classifier-comparison.ts
+
+# Run LLM classifier comparison (DATDP, CCFC)
+npx tsx tests/benchmarks/experiments/llm-classifier-comparison.ts
+
+# Run strategy comparison
+npx tsx tests/benchmarks/experiments/strategy-comparison.ts
+
+# Run exchange benchmark
+npx tsx tests/benchmarks/experiments/exchange-benchmark.ts
 ```
 
-### Target Metrics
+### Datasets
 
-| Metric | Target | Description |
-|--------|--------|-------------|
-| Attack Success Rate | <5% | DATDP 159 harmful behaviors |
-| Defense Rate | >95% | ZeroLeaks 184 probes |
-| False Positive Rate | <1% | Benign prompt blocking |
-| F1 Score | >0.95 | Precision/recall balance |
+| Dataset | Cases | Type | Source |
+|---------|-------|------|--------|
+| Curated | 103 | Injection + Benign | Hand-crafted scenarios |
+| ZeroLeaks | 264 | Injection | Encoding/obfuscation attacks |
+| InjecAgent | 2108 | Injection | Tool-response injections |
+| NotInject | 339 | Benign | Over-defense testing |
+| AgentDojo | 80+ | Injection | Agentic scenarios |
+| BIPIA | 125 | Mixed | Text and code injection |
 
-## Research & Attribution
+### Using the Benchmark Framework
 
-MoltShield implements and builds upon research from three projects:
+```typescript
+import { runBenchmark, printResults, loadAllInjection, loadAllBenign } from "moltshield/tests/benchmarks/framework";
 
-### DATDP (Defense Against The Dark Prompts)
+const testCases = [...await loadAllInjection(), ...await loadAllBenign()];
 
-> **Repository:** https://github.com/alignedai/DATDP
->
-> **Paper:** [Defense Against the Dark Prompts: Mitigating Best-of-N Jailbreaking](https://www.alignmentforum.org/posts/5MyB8k8hSJRfa3udi/defense-against-the-dark-prompts-mitigating-best-of-n)
+const result = await runBenchmark(testCases, {
+  name: "MyClassifier",
+  classifier: async (input) => ({ blocked: false, confidence: 0.5 }),
+  concurrency: 10,
+});
 
-The core algorithm. Uses a separate evaluator LLM with N-iteration weighted voting to detect adversarial prompts. Key insight: the character-level perturbations that enable Best-of-N attacks (random caps, unicode tricks) make detection easier, not harder.
-
-**Datasets included via submodule:**
-- 1045 Best-of-N augmented jailbreak prompts
-- 250 benign prompts for false positive testing
-- 159 original harmful behavior prompts
-
-### HarmBench
-
-> **Repository:** https://github.com/centerforaisafety/HarmBench
->
-> **Paper:** [HarmBench: A Standardized Evaluation Framework for Automated Red Teaming](https://arxiv.org/abs/2402.04249)
-
-DATDP includes a curated 159-prompt subset from HarmBench (copyright prompts removed).
-
-### ZeroLeaks
-
-> **Repository:** https://github.com/ZeroLeaks/zeroleaks
-
-Comprehensive prompt injection scanner with 184+ attack probes across 13 categories:
-- Direct extraction
-- Encoding bypasses (base64, rot13, hex, unicode)
-- Persona attacks (DAN, roleplay)
-- Social engineering
-- Technical injection
-- Modern attacks (crescendo, many-shot, CoT hijack, ASCII art, policy puppetry, context overflow)
-
-**Included via submodule** - all probes available for testing.
+printResults(result);
+```
 
 ## Project Structure
 
 ```
 moltshield/
 ├── src/
-│   ├── evaluator.ts          # Core DATDP implementation
-│   └── index.ts              # Public exports
-├── patch/
-│   ├── pre-inference-handler.ts  # Pre-inference hook
-│   ├── core-patch.ts         # OpenClaw patcher
-│   └── HOOK.md               # Hook metadata
-├── skill/
-│   └── SKILL.md              # Skill definition
+│   ├── index.ts           # Public exports
+│   ├── evaluator.ts       # Main API (evaluatePrompt, shouldBlock)
+│   ├── strategy.ts        # Composable strategy tree
+│   ├── heuristics.ts      # Pattern-based detection
+│   ├── datdp.ts           # DATDP N-iteration voting
+│   ├── ccfc.ts            # Context-Centric Few-Shot Classification
+│   ├── exchange.ts        # Post-inference exchange evaluation
+│   ├── image.ts           # Image evaluation
+│   ├── providers.ts       # Multi-provider LLM support
+│   ├── config.ts          # Configuration resolution
+│   ├── cache.ts           # LRU caching
+│   └── types.ts           # Shared types
 ├── tests/
-│   ├── evaluator.test.ts     # Unit tests
-│   ├── benchmarks/           # Benchmark runners
-│   │   ├── zeroleaks.ts      # ZeroLeaks injection probes
-│   │   ├── false-positives.ts # FPR testing
-│   │   ├── strategy-comparison.ts # DATDP vs CCFC vs Exchange
-│   │   └── logger.ts         # Shared logging utilities
-│   └── fixtures/             # Test data (git submodules)
-│       ├── zeroleaks/        # ZeroLeaks injection probes
-│       ├── agentdojo/        # AgentDojo agentic scenarios
-│       ├── injecagent/       # InjecAgent tool-integrated tests
-│       └── injecguard/       # NotInject over-defense tests
-├── data/                     # Benchmark results (gitignored)
-└── dist/                     # Compiled output
+│   ├── unit/              # Unit tests
+│   ├── benchmarks/
+│   │   ├── framework/     # Benchmark harness, loaders, datasets
+│   │   └── experiments/   # Benchmark scripts
+│   └── fixtures/          # Test data (git submodules)
+│       ├── zeroleaks/     # ZeroLeaks injection probes
+│       ├── agentdojo/     # AgentDojo scenarios
+│       ├── injecagent/    # InjecAgent tool injections
+│       └── injecguard/    # NotInject benign cases
+├── results/               # Benchmark results
+└── data/                  # Runtime output (gitignored)
 ```
 
-## API Usage
+## Research & Attribution
 
-```typescript
-import { evaluatePrompt, shouldBlock } from 'moltshield';
+### DATDP (Defense Against The Dark Prompts)
+- **Paper:** [Defense Against the Dark Prompts](https://www.alignmentforum.org/posts/5MyB8k8hSJRfa3udi/defense-against-the-dark-prompts-mitigating-best-of-n)
+- **Repository:** https://github.com/alignedai/DATDP
 
-const result = await evaluatePrompt("How do I hack a computer?", {
-  iterations: 5,
-  task: "safety1",
-  verbose: true,
-});
+### InjecAgent
+- **Paper:** [InjecAgent: Benchmarking Indirect Prompt Injections in Tool-Integrated LLM Agents](https://arxiv.org/abs/2403.02691)
+- **Repository:** https://github.com/uiuc-kang-lab/InjecAgent
 
-if (shouldBlock(result)) {
-  console.log("Blocked:", result.reasoning);
-  console.log("DATDP score:", result.datdp?.score);
-} else {
-  console.log("Safe to proceed");
-}
-```
+### AgentDojo
+- **Paper:** [AgentDojo: Benchmarking Agent Security](https://arxiv.org/abs/2406.13352)
+- **Repository:** https://github.com/ethz-spylab/agentdojo
 
-## Commands
+### NotInject (from InjecGuard)
+- **Paper:** [InjecGuard: Preventing Prompt Injection Attacks](https://arxiv.org/abs/2410.22770)
+- **Repository:** https://github.com/SaFoLab-WISC/InjecGuard
 
-```bash
-# Build
-npm run build
-
-# Test
-npm test                    # Unit tests
-npm run benchmark           # All benchmarks
-
-# Patch management
-npm run patch:status        # Check if OpenClaw is patched
-npm run patch:apply         # Apply core patch
-npm run patch:remove        # Remove core patch
-
-# Installation
-npm run install:all         # Full install (build + hook + skill + patch)
-npm run uninstall           # Remove MoltShield completely
-```
+### ZeroLeaks
+- **Repository:** https://github.com/ZeroLeaks/zeroleaks
 
 ## License
 
@@ -224,9 +258,9 @@ MIT
 
 ## Contributing
 
-Contributions welcome. Please ensure benchmarks pass before submitting PRs.
+Contributions welcome. Run benchmarks before submitting PRs:
 
-Priority areas:
-1. Additional heuristic patterns for emerging attack techniques
-2. Performance optimization for high-throughput scenarios
-3. Native OpenClaw `pre_inference` hook (upstream PR)
+```bash
+npm test
+npx tsx tests/benchmarks/experiments/classifier-comparison.ts 100
+```
