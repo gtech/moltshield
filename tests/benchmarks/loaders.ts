@@ -54,25 +54,16 @@ export function loadCuratedBenign(): TestCase[] {
 // ZeroLeaks Loader
 // ============================================================================
 
-interface ZeroLeaksProbe {
-  id: string;
-  category: string;
-  technique: string;
-  prompt: string;
-}
-
 /**
- * Load ZeroLeaks injection probes
- * Structure: tests/fixtures/zeroleaks/probes.json (extracted from TypeScript source)
- * To regenerate: cd tests/fixtures/zeroleaks && npx tsx extract-probes.ts > probes.json
+ * Load ZeroLeaks injection probes directly from the submodule
  */
 export async function loadZeroLeaks(): Promise<TestCase[]> {
-  const filepath = path.join(FIXTURES_DIR, "zeroleaks", "probes.json");
   const cases: TestCase[] = [];
 
   try {
-    const content = await fs.readFile(filepath, "utf-8");
-    const probes: ZeroLeaksProbe[] = JSON.parse(content);
+    // Dynamic import from the zeroleaks submodule
+    const { getAllProbes } = await import("../fixtures/zeroleaks/src/probes/index.js");
+    const probes = getAllProbes();
 
     for (const probe of probes) {
       cases.push({
@@ -89,7 +80,6 @@ export async function loadZeroLeaks(): Promise<TestCase[]> {
     }
   } catch (error) {
     console.warn(`Warning: Could not load ZeroLeaks data: ${error}`);
-    console.warn("Run: cd tests/fixtures/zeroleaks && npx tsx extract-probes.ts > probes.json");
   }
 
   return cases;
