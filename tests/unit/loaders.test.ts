@@ -2,7 +2,7 @@
  * Data Loaders Unit Tests
  *
  * Verifies all benchmark data loaders work correctly and return expected data.
- * Run with: npx tsx tests/benchmarks/loaders.test.ts
+ * Run with: npx vitest run tests/unit/loaders.test.ts
  */
 import {
   loadCuratedInjection,
@@ -18,8 +18,8 @@ import {
   loadAllBenign,
   loadBalanced,
   getDatasetStats,
-} from "./loaders.js";
-import type { TestCase } from "./harness.js";
+} from "../benchmarks/framework/loaders.js";
+import type { TestCase } from "../benchmarks/framework/harness.js";
 
 // ============================================================================
 // Test Utilities

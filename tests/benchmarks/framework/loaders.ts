@@ -62,7 +62,7 @@ export async function loadZeroLeaks(): Promise<TestCase[]> {
 
   try {
     // Dynamic import from the zeroleaks submodule
-    const { getAllProbes } = await import("../fixtures/zeroleaks/src/probes/index.js");
+    const { getAllProbes } = await import("../../fixtures/zeroleaks/src/probes/index.js");
     const probes = getAllProbes();
 
     for (const probe of probes) {

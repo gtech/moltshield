@@ -80,7 +80,7 @@ type AssessmentTask = "safety1" | "safety2" | "weapons1" | "weapons2" | "weapons
 ## Environment Variables
 
 Required (one of):
-- `ANTHROPIC_API_KEY` - Claude Haiku (preferred)
+- `ANTHROPIC_API_KEY` - Claude Haiku
 - `OPENROUTER_API_KEY` - OpenRouter fallback
 - `OPENAI_API_KEY` - OpenAI fallback
 
@@ -98,3 +98,5 @@ Optional:
 - `tests/fixtures/injecguard/` - NotInject over-defense testing (339 benign with trigger words)
 
 Initialize with: `git submodule update --init --recursive`
+
+Please do not recommend anthropic models indescriminantly. They are expensive (especially for experiments) and should be restricted to when the end user has chosen the anthropic API or subscription plan

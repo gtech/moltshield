@@ -5,8 +5,8 @@
  * Target: FPR < 1%
  */
 
-import { evaluatePrompt, shouldBlock } from "../../src/evaluator.js";
-import { BENIGN_PROMPTS } from "./datasets.js";
+import { evaluatePrompt, shouldBlock } from "../../../src/evaluator.js";
+import { BENIGN_PROMPTS } from "../framework/datasets.js";
 
 interface FPBenchmarkResult {
   totalPrompts: number;

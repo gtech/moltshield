@@ -9,8 +9,8 @@
  * 3. Run Exchange classifier on input+response pairs
  *
  * Usage:
- *   npx tsx tests/benchmarks/exchange-benchmark.ts [count]
- *   npx tsx tests/benchmarks/exchange-benchmark.ts 50
+ *   npx tsx tests/benchmarks/experiments/exchange-benchmark.ts [count]
+ *   npx tsx tests/benchmarks/experiments/exchange-benchmark.ts 50
  */
 
 import "dotenv/config";
@@ -20,10 +20,10 @@ import {
   type ClassifierFn,
   type BenchmarkConfig,
   type TestCase,
-} from "./harness.js";
-import { loadAllInjection, loadAllBenign } from "./loaders.js";
-import { evaluateExchange } from "../../src/exchange.js";
-import { resolveConfig } from "../../src/config.js";
+} from "../framework/harness.js";
+import { loadAllInjection, loadAllBenign } from "../framework/loaders.js";
+import { evaluateExchange } from "../../../src/exchange.js";
+import { resolveConfig } from "../../../src/config.js";
 
 // ============================================================================
 // Response Generation
