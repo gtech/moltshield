@@ -153,7 +153,7 @@ class LocalClassifier {
 // ============================================================================
 
 async function main() {
-  const maxCases = parseInt(process.argv[2] || "100");
+  const maxCases = parseInt(process.argv[2] || "0");  // 0 = all cases
 
   console.log("=".repeat(70));
   console.log("CLASSIFIER COMPARISON BENCHMARK");
@@ -170,14 +170,19 @@ async function main() {
   console.log(`  Injection cases available: ${injectionCases.length}`);
   console.log(`  Benign cases available: ${benignCases.length}`);
 
-  // Sample balanced dataset
-  const halfCount = Math.floor(maxCases / 2);
-  const injectionSample = injectionCases
-    .sort(() => Math.random() - 0.5)
-    .slice(0, halfCount);
-  const benignSample = benignCases
-    .sort(() => Math.random() - 0.5)
-    .slice(0, halfCount);
+  // Use all cases or sample if maxCases specified
+  let injectionSample = injectionCases;
+  let benignSample = benignCases;
+
+  if (maxCases > 0 && maxCases < injectionCases.length + benignCases.length) {
+    const halfCount = Math.floor(maxCases / 2);
+    injectionSample = injectionCases
+      .sort(() => Math.random() - 0.5)
+      .slice(0, halfCount);
+    benignSample = benignCases
+      .sort(() => Math.random() - 0.5)
+      .slice(0, halfCount);
+  }
 
   const testCases: TestCase[] = [...injectionSample, ...benignSample];
   console.log(`  Using ${testCases.length} cases (${injectionSample.length} injection, ${benignSample.length} benign)`);
