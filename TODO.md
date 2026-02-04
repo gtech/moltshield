@@ -14,6 +14,8 @@
 - [x] turn heurisics off by default
 - [x] Cost-benefit analysis of heuristics, might be useless overhead
 - [x] is the pre agent step hook good enough for our patch?
+- CCFC timeout issue in parallel benchmarks (makes 3x API calls, needs longer timeout or rate limiting)
+- Add `data/` to .gitignore
 
 ## Pending
 - [ ] Use the current default inference config structure of moltbot to find what inference provider the main model is using and configure moltshield based on it
@@ -42,8 +44,7 @@
 - normalization module alongside heuristic module.
 - rewrite arch docs; dedup arch from contributors.md
 - TraceEntry node naming: use fixed `type` field for programmatic matching, keep descriptive `node` for display
-- CCFC timeout issue in parallel benchmarks (makes 3x API calls, needs longer timeout or rate limiting)
-- Add `data/` to .gitignore
+- Are DATDP, CFCC, and Exchange differentiated?
 
 - Push to clawdhub https://www.clawhub.com/
 

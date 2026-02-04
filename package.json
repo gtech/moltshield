@@ -1,7 +1,7 @@
 {
   "name": "moltshield",
   "version": "2.0.0",
-  "description": "DATDP-based pre-inference defense for OpenClaw",
+  "description": "Pre-inference prompt injection defense for OpenClaw",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -14,13 +14,10 @@
   "scripts": {
     "build": "tsc",
     "test": "npx tsx tests/evaluator.test.ts",
-    "test:integration": "npx tsx tests/integration/baseline-validation.ts",
-    "benchmark": "npm run benchmark:datdp && npm run benchmark:zeroleaks && npm run benchmark:bon && npm run benchmark:fp",
-    "benchmark:datdp": "npx tsx tests/benchmarks/datdp.ts",
-    "benchmark:compare": "npx tsx tests/benchmarks/compare-datdp-ccfc.ts",
+    "benchmark": "npm run benchmark:zeroleaks && npm run benchmark:fp",
     "benchmark:zeroleaks": "npx tsx tests/benchmarks/zeroleaks.ts",
-    "benchmark:bon": "npx tsx tests/benchmarks/bon-attacks.ts",
     "benchmark:fp": "npx tsx tests/benchmarks/false-positives.ts",
+    "benchmark:strategy": "npx tsx tests/benchmarks/strategy-comparison.ts",
     "patch:status": "npx tsx patch/core-patch.ts status",
     "patch:apply": "npx tsx patch/core-patch.ts apply",
     "patch:remove": "npx tsx patch/core-patch.ts remove",
@@ -31,10 +28,10 @@
   },
   "keywords": [
     "openclaw",
-    "datdp",
-    "jailbreak",
     "prompt-injection",
-    "security"
+    "indirect-injection",
+    "llm-security",
+    "agentic-defense"
   ],
   "license": "MIT",
   "devDependencies": {

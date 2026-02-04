@@ -166,13 +166,15 @@ moltshield/
 ├── tests/
 │   ├── evaluator.test.ts     # Unit tests
 │   ├── benchmarks/           # Benchmark runners
-│   │   ├── datdp.ts          # DATDP datasets (BoN, benign, HarmBench subset)
-│   │   ├── zeroleaks.ts      # ZeroLeaks integration
-│   │   ├── bon-attacks.ts    # Best-of-N attacks
-│   │   └── false-positives.ts
+│   │   ├── zeroleaks.ts      # ZeroLeaks injection probes
+│   │   ├── false-positives.ts # FPR testing
+│   │   ├── strategy-comparison.ts # DATDP vs CCFC vs Exchange
+│   │   └── logger.ts         # Shared logging utilities
 │   └── fixtures/             # Test data (git submodules)
-│       ├── datdp/            # github.com/alignedai/DATDP
-│       └── zeroleaks/        # github.com/ZeroLeaks/zeroleaks
+│       ├── zeroleaks/        # ZeroLeaks injection probes
+│       ├── agentdojo/        # AgentDojo agentic scenarios
+│       ├── injecagent/       # InjecAgent tool-integrated tests
+│       └── injecguard/       # NotInject over-defense tests
 ├── data/                     # Benchmark results (gitignored)
 └── dist/                     # Compiled output
 ```
