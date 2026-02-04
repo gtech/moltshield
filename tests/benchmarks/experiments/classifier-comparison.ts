@@ -8,8 +8,8 @@
  * Uses Python subprocess for local transformer inference.
  *
  * Usage:
- *   npx tsx tests/benchmarks/classifier-comparison.ts [count]
- *   npx tsx tests/benchmarks/classifier-comparison.ts 100
+ *   npx tsx tests/benchmarks/experiments/classifier-comparison.ts [count]
+ *   npx tsx tests/benchmarks/experiments/classifier-comparison.ts 100
  */
 
 import "dotenv/config";
@@ -21,8 +21,8 @@ import {
   type ClassifierFn,
   type BenchmarkConfig,
   type TestCase,
-} from "./harness.js";
-import { loadAllInjection, loadAllBenign } from "./loaders.js";
+} from "../framework/harness.js";
+import { loadAllInjection, loadAllBenign } from "../framework/loaders.js";
 
 // ============================================================================
 // Python Classifier Wrapper
@@ -53,7 +53,7 @@ class LocalClassifier {
   async start(): Promise<void> {
     return new Promise((resolve, reject) => {
       this.process = spawn(".venv/bin/python", [
-        "tests/benchmarks/local-classifier.py",
+        "tests/benchmarks/framework/local-classifier.py",
         "--model", this.model,
         "--batch"
       ], {

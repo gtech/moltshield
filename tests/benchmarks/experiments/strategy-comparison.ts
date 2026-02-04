@@ -3,15 +3,15 @@
  *
  * Compares DATDP, CCFC, and Exchange classifier on indirect injection.
  *
- * Usage: npx tsx tests/benchmarks/strategy-comparison.ts
+ * Usage: npx tsx tests/benchmarks/experiments/strategy-comparison.ts
  */
 
 import "dotenv/config";
-import { evaluatePrompt, evaluateExchange, execute, PRESET_DATDP, PRESET_CCFC } from "../../src/evaluator.js";
-import { resolveConfig } from "../../src/config.js";
-import { callLLM } from "../../src/providers.js";
+import { evaluatePrompt, evaluateExchange, execute, PRESET_DATDP, PRESET_CCFC } from "../../../src/evaluator.js";
+import { resolveConfig } from "../../../src/config.js";
+import { callLLM } from "../../../src/providers.js";
 import * as fs from "fs/promises";
-import { INDIRECT_INJECTION_CASES } from "./datasets.js";
+import { INDIRECT_INJECTION_CASES } from "../framework/datasets.js";
 
 // Custom augmented exchange classifier - gives CCFC core as focus hint without bias labels
 async function evaluateAugmentedExchange(

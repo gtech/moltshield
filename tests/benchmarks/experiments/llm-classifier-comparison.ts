@@ -7,7 +7,7 @@
  * - Exchange (post-inference, requires response generation)
  *
  * Usage:
- *   npx tsx tests/benchmarks/llm-classifier-comparison.ts [count]
+ *   npx tsx tests/benchmarks/experiments/llm-classifier-comparison.ts [count]
  */
 
 import "dotenv/config";
@@ -17,10 +17,10 @@ import {
   type ClassifierFn,
   type BenchmarkConfig,
   type TestCase,
-} from "./harness.js";
-import { loadAllInjection, loadAllBenign } from "./loaders.js";
-import { execute, PRESET_DATDP, PRESET_CCFC } from "../../src/strategy.js";
-import { resolveConfig } from "../../src/config.js";
+} from "../framework/harness.js";
+import { loadAllInjection, loadAllBenign } from "../framework/loaders.js";
+import { execute, PRESET_DATDP, PRESET_CCFC } from "../../../src/strategy.js";
+import { resolveConfig } from "../../../src/config.js";
 
 // ============================================================================
 // Classifier Wrappers

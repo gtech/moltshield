@@ -6,14 +6,14 @@
  * - Check if model follows injection vs user request
  * - Exchange classifier should detect manipulation
  *
- * Usage: npx tsx tests/benchmarks/indirect-injection.ts [maxPrompts]
+ * Usage: npx tsx tests/benchmarks/experiments/indirect-injection.ts [maxPrompts]
  */
 
 import "dotenv/config";
-import { evaluateExchange } from "../../src/exchange.js";
-import { resolveConfig } from "../../src/config.js";
+import { evaluateExchange } from "../../../src/exchange.js";
+import { resolveConfig } from "../../../src/config.js";
 import * as fs from "fs/promises";
-import { INDIRECT_INJECTION_CASES, type IndirectInjectionCase } from "./datasets.js";
+import { INDIRECT_INJECTION_CASES, type IndirectInjectionCase } from "../framework/datasets.js";
 
 const RESPONSE_MODEL = "moonshotai/kimi-k2-0905";
 const CLASSIFIER_MODEL = "openai/gpt-oss-120b";
