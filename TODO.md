@@ -16,6 +16,8 @@
 - [x] is the pre agent step hook good enough for our patch?
 - CCFC timeout issue in parallel benchmarks (makes 3x API calls, needs longer timeout or rate limiting)
 - Add `data/` to .gitignore
+- [x] reconcile benchmarks and benchmarks-sentinel_v2 (cleaned up, kept sentinel_v2 for classifier diversity research)
+- [x] Are DATDP, CFCC, and Exchange differentiated? (covered in Research Program Phase 2-3)
 
 ## Research Program
 
@@ -156,14 +158,18 @@ See `tests/benchmarks/attack-taxonomy.ts` for full documentation.
 - Make sure skill install isn't heavy e.g. lazy-load submodules and depps for benchmarks
 - Choose default small models for all major providers
 - github actions basic sanity unit tests
-- [x] reconcile benchmarks and benchmarks-sentinel_v2 (cleaned up, kept sentinel_v2 for classifier diversity research)
+- embeddings for reputation and attack types? (and more?)
+- [x] Search for better implementations of DATDP or CFCC. Our high FP rate might be becase we forked it up
+- Get some real prompt-output data to run the strategies on to get more realistic FP rates
+
 - add escalation framework
 - break auth and config into plugin lifecycle?
 - honestly see if those prompts work for images
 - reexamine cc++ and cfcc prompts vs paper
 - normalization module alongside heuristic module.
 - TraceEntry node naming: use fixed `type` field for programmatic matching, keep descriptive `node` for display
-- [x] Are DATDP, CFCC, and Exchange differentiated? (covered in Research Program Phase 2-3)
+
+- Fold benchmarks-sentinel_v2 into benchmarks
 
 - Push to clawdhub https://www.clawhub.com/
 

@@ -20,14 +20,19 @@ from transformers import AutoTokenizer, AutoModelForSequenceClassification
 MODELS = {
     "pg2": "meta-llama/Llama-Prompt-Guard-2-86M",
     "deberta": "protectai/deberta-v3-base-prompt-injection-v2",
+    "piguard": "leolee99/PIGuard",
+    "sentinel": "qualifire/prompt-injection-sentinel",
+    "deepset": "deepset/deberta-v3-base-injection",
 }
 
 
 def load_model(model_key: str):
     """Load model and tokenizer."""
     model_id = MODELS[model_key]
-    tokenizer = AutoTokenizer.from_pretrained(model_id)
-    model = AutoModelForSequenceClassification.from_pretrained(model_id)
+    # Some models require trust_remote_code for custom architectures
+    trust_remote = model_key in ("piguard",)
+    tokenizer = AutoTokenizer.from_pretrained(model_id, trust_remote_code=trust_remote)
+    model = AutoModelForSequenceClassification.from_pretrained(model_id, trust_remote_code=trust_remote)
     model.eval()
     return tokenizer, model
 
@@ -43,13 +48,18 @@ def classify(text: str, tokenizer, model) -> dict:
     pred_id = logits.argmax().item()
     pred_label = model.config.id2label[pred_id]
 
-    # Handle different label formats
+    # Handle different label formats from various models
+    label_upper = pred_label.upper()
     if pred_label in ("LABEL_0", "LABEL_1"):
         is_injection = pred_id == 1  # LABEL_1 = injection
-        confidence = probs[pred_id].item()
+    elif label_upper in ("INJECTION", "JAILBREAK", "MALICIOUS", "UNSAFE", "ATTACK", "POSITIVE"):
+        is_injection = True
+    elif label_upper in ("SAFE", "BENIGN", "LEGITIMATE", "NEGATIVE"):
+        is_injection = False
     else:
-        is_injection = pred_label.upper() in ("INJECTION", "JAILBREAK", "MALICIOUS")
-        confidence = probs[pred_id].item()
+        # Fallback: assume higher index = injection (common convention)
+        is_injection = pred_id == 1
+    confidence = probs[pred_id].item()
 
     return {
         "blocked": is_injection,

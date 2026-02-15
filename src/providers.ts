@@ -144,8 +144,10 @@ const openaiStyleProvider = (name: string, referer?: string): Provider => ({
   },
 
   parseResponse(data) {
-    return (data as { choices: Array<{ message?: { content?: string } }> })
-      .choices[0]?.message?.content || "";
+    const msg = (data as { choices: Array<{ message?: { content?: string | null; reasoning?: string } }> })
+      .choices[0]?.message;
+    // Handle reasoning models (like Kimi-K2.5) where content is null but reasoning has the text
+    return msg?.content || msg?.reasoning || "";
   },
 });
 
@@ -186,6 +188,7 @@ const providers: Record<string, Provider> = {
   anthropic: anthropicProvider,
   openrouter: openaiStyleProvider("openrouter", "https://github.com/moltshield"),
   openai: openaiStyleProvider("openai"),
+  synthetic: openaiStyleProvider("synthetic"),
   ollama: ollamaProvider,
 };
 
@@ -255,6 +258,56 @@ export async function callLLM(
     provider.buildTextBody(systemPrompt, userPrompt, opts),
     config.timeout
   );
+}
+
+/**
+ * Call embedding API to get vector representations of texts.
+ * Uses the Synthetic API with nomic-embed-text-v1.5.
+ */
+export async function callEmbedding(
+  texts: string[],
+  config: ResolvedConfig,
+): Promise<number[][]> {
+  const embeddingEndpoint = config.endpoint.replace(
+    /\/chat\/completions\/?$/,
+    "/embeddings",
+  );
+
+  const controller = new AbortController();
+  const timeoutMs = 30000;
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const response = await fetch(embeddingEndpoint, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${config.apiKey}`,
+      },
+      body: JSON.stringify({
+        model: "hf:nomic-ai/nomic-embed-text-v1.5",
+        input: texts,
+      }),
+      signal: controller.signal,
+    });
+
+    if (!response.ok) {
+      const body = await response.text().catch(() => "");
+      throw new Error(
+        `Embedding API error: ${response.status}${body ? ` - ${body}` : ""}`,
+      );
+    }
+
+    const data = (await response.json()) as {
+      data: Array<{ embedding: number[]; index: number }>;
+    };
+
+    // Sort by index to match input order, then extract embeddings
+    const sorted = data.data.sort((a, b) => a.index - b.index);
+    return sorted.map((d) => d.embedding);
+  } finally {
+    clearTimeout(timeoutId);
+  }
 }
 
 /**

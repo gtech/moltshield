@@ -82,6 +82,8 @@ export interface DATDPResult {
 export interface EvaluatorConfig {
   /** Anthropic API key for Claude Haiku (preferred) */
   anthropicApiKey?: string;
+  /** Synthetic API key for HuggingFace models (e.g., Kimi-K2.5) */
+  syntheticApiKey?: string;
   /** OpenRouter API key (fallback) */
   openRouterApiKey?: string;
   /** OpenAI API key (fallback) */
@@ -133,7 +135,7 @@ export interface EvaluatorConfig {
 }
 
 export interface ResolvedConfig {
-  evaluator: "anthropic" | "openrouter" | "openai" | "ollama" | "heuristics";
+  evaluator: "anthropic" | "openrouter" | "openai" | "synthetic" | "ollama" | "heuristics";
   apiKey: string;
   model: string;
   visionModel: string;
