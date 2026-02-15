@@ -46,7 +46,7 @@ class LocalClassifier {
   private responseQueue: Array<{ resolve: (r: ClassifierResult) => void; reject: (e: Error) => void }> = [];
   private modelName: string;
 
-  constructor(private model: "pg2" | "deberta") {
+  constructor(private model: "pg2" | "deberta" | "piguard" | "sentinel" | "deepset") {
     this.modelName = model.toUpperCase();
   }
 
@@ -187,35 +187,34 @@ async function main() {
   const testCases: TestCase[] = [...injectionSample, ...benignSample];
   console.log(`  Using ${testCases.length} cases (${injectionSample.length} injection, ${benignSample.length} benign)`);
 
-  // Initialize classifiers
-  console.log("\nInitializing classifiers...");
-
-  const pg2 = new LocalClassifier("pg2");
-  const deberta = new LocalClassifier("deberta");
-
-  try {
-    console.log("  Starting PG2...");
-    await pg2.start();
-    console.log("  Starting DeBERTa...");
-    await deberta.start();
-    console.log("  Classifiers ready.");
-  } catch (error) {
-    console.error("Failed to start classifiers:", error);
-    process.exit(1);
-  }
-
-  // Run benchmarks
-  const classifiers: Array<{ name: string; classifier: LocalClassifier }> = [
-    { name: "PG2", classifier: pg2 },
-    { name: "DeBERTa", classifier: deberta },
+  // Define classifiers to run (start/stop each one individually to save memory)
+  type ModelKey = "pg2" | "deberta" | "piguard" | "sentinel" | "deepset";
+  const classifiersToRun: Array<{ name: string; model: ModelKey }> = [
+    // Existing classifiers (commented out - already benchmarked)
+    // { name: "PG2", model: "pg2" },
+    // { name: "DeBERTa", model: "deberta" },
+    // New classifiers to benchmark
+    { name: "PIGuard", model: "piguard" },
+    { name: "Sentinel", model: "sentinel" },
+    { name: "Deepset", model: "deepset" },
   ];
 
   const results = [];
 
-  for (const { name, classifier } of classifiers) {
+  for (const { name, model } of classifiersToRun) {
     console.log(`\n${"=".repeat(70)}`);
     console.log(`Running: ${name}`);
     console.log("=".repeat(70));
+
+    // Start classifier for this run
+    const classifier = new LocalClassifier(model);
+    try {
+      console.log(`  Starting ${name}...`);
+      await classifier.start();
+    } catch (error) {
+      console.error(`Failed to start ${name}:`, error);
+      continue;
+    }
 
     const config: BenchmarkConfig = {
       name,
@@ -233,11 +232,11 @@ async function main() {
     } catch (error) {
       console.error(`Error running ${name}:`, error);
     }
-  }
 
-  // Cleanup
-  pg2.stop();
-  deberta.stop();
+    // Stop classifier to free memory before next one
+    classifier.stop();
+    console.log(`  ${name} stopped, memory freed.`);
+  }
 
   // Summary comparison
   if (results.length > 1) {

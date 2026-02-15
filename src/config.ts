@@ -198,6 +198,20 @@ export async function resolveConfig(userConfig: EvaluatorConfig): Promise<Resolv
     }
   }
 
+  // Check Synthetic API (supports HuggingFace models like Kimi-K2.5)
+  const syntheticKey = userConfig.syntheticApiKey ?? process.env.SYNTHETIC_API_KEY;
+  if (syntheticKey) {
+    return {
+      evaluator: "synthetic",
+      apiKey: syntheticKey,
+      model: modelOverride ?? "hf:moonshotai/Kimi-K2.5",
+      visionModel: visionModelOverride ?? "hf:moonshotai/Kimi-K2.5",
+      endpoint: "https://api.synthetic.new/openai/v1/chat/completions",
+      iterations: userConfig.iterations ?? 5,
+      ...baseConfig,
+    };
+  }
+
   // Check OpenRouter
   const openRouterKey = userConfig.openRouterApiKey ?? process.env.OPENROUTER_API_KEY;
   if (openRouterKey) {

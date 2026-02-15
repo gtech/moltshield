@@ -1,6 +1,6 @@
 # Classifier Comparison Results
 
-**Date:** 2026-02-04
+**Date:** 2026-02-04 (updated 2026-02-05)
 **Dataset:** 2,814 cases (2,415 injection + 399 benign)
 **Sources:** InjecAgent (2,108), ZeroLeaks (264), Curated (43), NotInject (339), Curated Benign (60)
 
@@ -10,8 +10,16 @@
 |------------|-----|-----|-----------|-----|---------|
 | **PG2** | 47.2% | **3.8%** | 98.7% | 0.639 | 556ms |
 | **DeBERTa** | 39.6% | 36.8% | 86.7% | 0.543 | 505ms |
+| **PIGuard** | **69.1%** | 11.8% | 97.3% | **0.807** | 466ms |
+| **Sentinel** | 51.5% | 22.0% | 93.4% | 0.664 | 661ms |
+| **Deepset** | 98.8% | 63.4% | 90.4% | 0.944 | 353ms |
 
-**Winner: PG2** - Despite lower TPR, PG2's dramatically lower FPR (3.8% vs 36.8%) makes it production-viable. DeBERTa blocks over 1/3 of legitimate queries.
+**Winner: PIGuard** - Best balance of TPR (69%) and FPR (12%). Significantly outperforms PG2 (+22% TPR) while keeping false positives manageable. The ACL 2025 paper's claims about fixing over-defense hold up.
+
+**Trade-off Spectrum:**
+- Conservative: PG2 (47% TPR, 4% FPR) - minimal false positives
+- **Balanced: PIGuard (69% TPR, 12% FPR)** ← recommended
+- Aggressive: Deepset (99% TPR, 63% FPR) - catches everything, unusable FPR
 
 ## Detailed Results
 
@@ -89,6 +97,103 @@
 
 ---
 
+### PIGuard (NEW - Recommended)
+
+- **Model:** `leolee99/PIGuard`
+- **Architecture:** DeBERTa-v3-base (200M params) with MOF training
+- **Paper:** ACL 2025 - Claims 30.8% improvement over baselines
+- **Overall:** 69.1% TPR, 11.8% FPR, F1=0.807
+- **Latency:** p50=466ms
+
+#### Strengths
+| Category | N | TPR | Notes |
+|----------|---|-----|-------|
+| zeroleaks-encoding | 83 | 84% | Handles encoded payloads |
+| zeroleaks-injection | 26 | 88% | Direct injection patterns |
+| injecagent-physical_harm | 340 | 78% | Best on physical harm |
+| injecagent-financial_harm | 306 | 71% | Good financial detection |
+| injecagent-data_security | 374 | 68% | Data exfil attempts |
+
+#### InjecAgent Performance (~68% TPR avg)
+| Category | N | TPR |
+|----------|---|-----|
+| injecagent-physical_harm | 340 | 78% |
+| injecagent-financial_harm | 306 | 71% |
+| injecagent-data_security_harm | 374 | 68% |
+| injecagent-financial_data | 204 | 67% |
+| injecagent-others | 510 | 64% |
+| injecagent-physical_data | 374 | 64% |
+
+#### False Positive Analysis
+| Benign Category | N | FPR | Notes |
+|-----------------|---|-----|-------|
+| notinject-technique_queries | 87 | 32% | Security questions trigger it |
+| notinject-common_queries | 126 | 7% | Acceptable |
+| notinject-virtual_creation | 42 | 4% | Good |
+| notinject-multilingual | 84 | 0% | **Excellent** - no language bias |
+
+**PIGuard is production-ready** with best-in-class balance. Only weakness is security-related queries (32% FPR on technique_queries).
+
+---
+
+### Prompt-Injection-Sentinel
+
+- **Model:** `qualifire/prompt-injection-sentinel`
+- **Architecture:** ModernBERT-large (400M params)
+- **Overall:** 51.5% TPR, 22.0% FPR, F1=0.664
+- **Latency:** p50=661ms (slowest due to larger model)
+
+#### Performance Summary
+Sentinel disappointed - only marginally better than PG2 on TPR while having 6x worse FPR.
+
+| Category | N | TPR |
+|----------|---|-----|
+| injecagent-physical_data | 374 | 65% |
+| injecagent-financial_data | 204 | 52% |
+| injecagent-others | 510 | 50% |
+| injecagent-financial_harm | 306 | 47% |
+| injecagent-physical_harm | 340 | 40% |
+| injecagent-data_security_harm | 374 | 38% |
+
+#### Critical Weakness: Multilingual FPR
+| Benign Category | N | FPR |
+|-----------------|---|-----|
+| notinject-multilingual | 84 | **53%** | Blocks half of non-English |
+| notinject-technique_queries | 87 | 31% | Same as others |
+| notinject-common_queries | 126 | 10% | Acceptable |
+
+**Sentinel is NOT recommended** - worse than PIGuard on both TPR and FPR.
+
+---
+
+### Deepset DeBERTa
+
+- **Model:** `deepset/deberta-v3-base-injection`
+- **Architecture:** DeBERTa-v3-base
+- **Overall:** 98.8% TPR, 63.4% FPR, F1=0.944
+- **Latency:** p50=353ms (fastest)
+
+#### Performance Summary
+Catches almost everything but blocks 2/3 of legitimate traffic.
+
+| Category | N | TPR |
+|----------|---|-----|
+| injecagent-* | 2108 | **100%** | Perfect on all InjecAgent |
+| zeroleaks-encoding | 83 | 100% | Perfect |
+| zeroleaks-direct | 33 | 42% | Only weakness |
+
+#### Critical Weakness: Unusable FPR
+| Benign Category | N | FPR |
+|-----------------|---|-----|
+| notinject-multilingual | 84 | **98%** | Blocks almost all non-English |
+| notinject-virtual_creation | 42 | **88%** | Blocks creative requests |
+| notinject-technique_queries | 87 | 57% | Blocks security questions |
+| notinject-common_queries | 126 | 57% | Blocks normal queries |
+
+**Deepset is NOT usable** - 63% FPR is catastrophic.
+
+---
+
 ## Attack Category Analysis
 
 ### Categories Both Handle Well (>75% TPR)
@@ -123,27 +228,54 @@
 
 ## Key Findings
 
-### 1. Neither classifier handles indirect injection reliably
+### 1. PIGuard significantly improves on InjecAgent detection
 
-InjecAgent (tool-response injection) makes up 75% of our attack dataset. Both classifiers achieve only 35-50% TPR on these attacks. This is the dominant threat for agentic applications.
+PIGuard achieves ~68% TPR on InjecAgent (tool-response injection) vs PG2's ~50% and DeBERTa's ~35%. This is the dominant threat for agentic applications, and PIGuard handles it best.
 
-### 2. PG2 is production-viable, DeBERTa is not
+| Classifier | InjecAgent TPR |
+|------------|----------------|
+| PIGuard | 68% |
+| PG2 | 50% |
+| Sentinel | 49% |
+| DeBERTa | 35% |
+| Deepset | 100% (but 63% FPR) |
 
-PG2's 3.8% FPR is acceptable for production. DeBERTa's 36.8% FPR would block over 1/3 of legitimate traffic - unacceptable for any real application.
+### 2. PIGuard solves the over-defense problem
 
-### 3. Encoding bypasses defeat PG2 completely
+The ACL 2025 paper claimed PIGuard fixes "over-defense" (high FPR). Our results confirm:
+- PIGuard: 69% TPR, 12% FPR
+- DeBERTa: 40% TPR, 37% FPR
+- Deepset: 99% TPR, 63% FPR
 
-PG2 has 0% TPR on base64, ROT13, and hex-encoded payloads. DeBERTa catches 75-88% of these. If encoding attacks are a concern, DeBERTa's patterns are more robust (but FPR is a dealbreaker).
+PIGuard achieves higher TPR with much lower FPR than other DeBERTa variants.
 
-### 4. Both excel at obvious injection patterns
+### 3. Multilingual handling varies dramatically
 
-Direct instruction override, delimiter injection, and persona hijacking are well-detected (100% TPR). These patterns are well-represented in training data.
+| Classifier | Multilingual FPR | Notes |
+|------------|------------------|-------|
+| PIGuard | **0%** | No language bias |
+| PG2 | 1% | Minimal |
+| Sentinel | 53% | Blocks half |
+| DeBERTa | 61% | Blocks most |
+| Deepset | 98% | Blocks almost all |
 
-### 5. Subtle attacks defeat both classifiers
+PIGuard is the only DeBERTa-based model without multilingual bias.
 
-- Crescendo (gradual persuasion): 0-28% TPR
-- CoT hijacking: 0-50% TPR
-- Policy puppetry: ~28% TPR
+### 4. Encoding bypasses still defeat PG2
+
+PG2 has 0% TPR on encoded payloads. PIGuard catches 84% of encoded attacks.
+
+| Classifier | Encoding Attack TPR |
+|------------|---------------------|
+| PIGuard | 84% |
+| Deepset | 100% |
+| DeBERTa | 88% |
+| Sentinel | 77% |
+| PG2 | 0% |
+
+### 5. Model size doesn't correlate with performance
+
+Sentinel (400M params) performed worse than PIGuard (200M params). Deepset (same arch as DeBERTa) was more aggressive with no accuracy benefit.
 
 ---
 
@@ -151,19 +283,26 @@ Direct instruction override, delimiter injection, and persona hijacking are well
 
 ### For Production Deployment
 
-1. **Use PG2 as fast first-pass filter**
-   - Catches obvious attacks with minimal false positives
-   - 556ms latency is acceptable for most applications
-   - Accept ~50% miss rate on sophisticated attacks
+1. **Use PIGuard as primary classifier** (NEW)
+   - Best balance: 69% TPR with 12% FPR
+   - 466ms latency is production-ready
+   - Handles InjecAgent-style attacks well (~68% TPR)
+   - No multilingual bias (0% FPR on non-English)
 
-2. **Add LLM-based classifier for high-value contexts**
+2. **Use PG2 for ultra-conservative deployments**
+   - Only 4% FPR if false positives are unacceptable
+   - Accept ~47% miss rate on attacks
+   - Good for low-risk applications
+
+3. **Add LLM-based classifier for high-value contexts**
    - DATDP or CCFC for tool-calling agents
-   - Escalate when PG2 confidence is uncertain
+   - Escalate when PIGuard confidence is uncertain
    - Worth the ~2-3s latency for sensitive operations
 
-3. **Do NOT use DeBERTa in production**
-   - 36.8% FPR is catastrophic for user experience
-   - Would need significant threshold tuning
+4. **Do NOT use DeBERTa, Sentinel, or Deepset in production**
+   - DeBERTa: 37% FPR - blocks 1/3 of traffic
+   - Sentinel: 22% FPR with only 51% TPR - worst of both worlds
+   - Deepset: 63% FPR - blocks 2/3 of traffic
 
 ### For Improving Detection
 
@@ -179,13 +318,15 @@ Input
   ├─► Heuristics (instant)
   │     └─ Block: delimiter injection, obvious patterns
   │
-  ├─► PG2 (500ms)
-  │     └─ Block: direct injection, persona hijacking
+  ├─► PIGuard (500ms)
+  │     └─ Block: injection patterns, tool injection
   │     └─ Escalate: low confidence
   │
   └─► DATDP/CCFC (2-3s) [if escalated or high-value]
-        └─ Block: tool injection, sophisticated attacks
+        └─ Block: sophisticated attacks, edge cases
 ```
+
+**Alternative (ultra-conservative):** Replace PIGuard with PG2 if 12% FPR is too high.
 
 ---
 
@@ -204,7 +345,12 @@ The larger sample confirms DeBERTa's FPR issue and reveals PG2 is better than th
 
 ## Raw Data
 
-Full benchmark output: `data/classifier-comparison-2026-02-04T21-*.json`
+**Benchmark files:**
+- `data/PG2-2026-02-04T*.json`
+- `data/DeBERTa-2026-02-04T*.json`
+- `data/PIGuard-2026-02-04T22-27-47.json`
+- `data/Sentinel-2026-02-04T22-59-32.json`
+- `data/Deepset-2026-02-04T23-17-02.json`
 
 **Dataset Composition:**
 - InjecAgent: 2,108 cases (74.9%)
@@ -212,3 +358,12 @@ Full benchmark output: `data/classifier-comparison-2026-02-04T21-*.json`
 - ZeroLeaks: 264 cases (9.4%)
 - Curated injection: 43 cases (1.5%)
 - Curated benign: 60 cases (2.1%)
+
+**Models tested:**
+| Model | HuggingFace ID | Params |
+|-------|----------------|--------|
+| PG2 | `meta-llama/Llama-Prompt-Guard-2-86M` | 86M |
+| DeBERTa | `protectai/deberta-v3-base-prompt-injection-v2` | 184M |
+| PIGuard | `leolee99/PIGuard` | 200M |
+| Sentinel | `qualifire/prompt-injection-sentinel` | 400M |
+| Deepset | `deepset/deberta-v3-base-injection` | 184M |
