@@ -1,7 +1,7 @@
 /**
  * Cherry-picked test: Encoded injection payloads
  *
- * Tests PG2 and PIGuard on known injection payloads that have been encoded.
+ * Tests classifiers on known injection payloads that have been encoded.
  * This directly measures if encoding preprocessing helps.
  */
 

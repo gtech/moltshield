@@ -15,6 +15,7 @@
  *   model: pg2 | piguard | deberta | sentinel | deepset
  */
 
+import "dotenv/config";
 import { spawn, ChildProcess } from "child_process";
 import * as readline from "readline";
 import * as fs from "fs";
@@ -43,7 +44,7 @@ class LocalClassifier {
   private responseQueue: Array<{ resolve: (r: ClassifierResult) => void; reject: (e: Error) => void }> = [];
   private modelName: string;
 
-  constructor(private model: "pg2" | "deberta" | "piguard" | "sentinel" | "deepset") {
+  constructor(private model: "pg2" | "pg1" | "deberta" | "piguard" | "sentinel" | "deepset") {
     this.modelName = model.toUpperCase();
   }
 
@@ -197,8 +198,8 @@ interface IntersectionMatrix {
 // Main
 // ============================================================================
 
-type ModelKey = "pg2" | "deberta" | "piguard" | "sentinel" | "deepset";
-const VALID_MODELS: ModelKey[] = ["pg2", "deberta", "piguard", "sentinel", "deepset"];
+type ModelKey = "pg2" | "pg1" | "deberta" | "piguard" | "sentinel" | "deepset";
+const VALID_MODELS: ModelKey[] = ["pg2", "pg1", "deberta", "piguard", "sentinel", "deepset"];
 
 async function main() {
   const modelArg = process.argv[2] as ModelKey;

@@ -184,3 +184,12 @@ See `tests/benchmarks/attack-taxonomy.ts` for full documentation.
 - [ ] GEPA extension (https://arxiv.org/abs/2507.19457)
 - [ ] Quarantine system
 - [ ] Resilient ecosystem
+
+
+
+https://arxiv.org/html/2601.04603v1#S1
+
+https://arxiv.org/html/2601.04603v1#S1
+
+https://arxiv.org/html/2510.09023v1
+

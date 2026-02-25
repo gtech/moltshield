@@ -19,6 +19,7 @@ from transformers import AutoTokenizer, AutoModelForSequenceClassification
 
 MODELS = {
     "pg2": "meta-llama/Llama-Prompt-Guard-2-86M",
+    "pg1": "meta-llama/Prompt-Guard-86M",
     "deberta": "protectai/deberta-v3-base-prompt-injection-v2",
     "piguard": "leolee99/PIGuard",
     "sentinel": "qualifire/prompt-injection-sentinel",

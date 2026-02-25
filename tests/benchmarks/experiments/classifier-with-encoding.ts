@@ -39,7 +39,7 @@ class LocalClassifier {
   private responseQueue: Array<{ resolve: (r: ClassifierResult) => void; reject: (e: Error) => void }> = [];
   private modelName: string;
 
-  constructor(private model: "pg2" | "deberta" | "piguard" | "sentinel" | "deepset") {
+  constructor(private model: "pg2" | "pg1" | "deberta" | "piguard" | "sentinel" | "deepset") {
     this.modelName = model.toUpperCase();
   }
 
