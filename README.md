@@ -1,5 +1,7 @@
 # MoltShield
 
+**Advisory: No formal release at this time.**
+
 **Composable pre-inference defense for LLM applications**
 
 MoltShield protects AI agents from prompt injection, jailbreaks, and adversarial content using a composable strategy tree of detection methods.
